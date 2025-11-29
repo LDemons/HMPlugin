@@ -23,8 +23,20 @@ public class MainCommand implements CommandExecutor {
         }
 
         if (args.length == 0) {
+            MessageUtils.send(player, "<gradient:gold:yellow><bold>═══ COMANDOS HM ═══</gradient>");
+            MessageUtils.send(player, "<yellow>/hm day <white>- Muestra el día actual");
+            MessageUtils.send(player, "<yellow>/hm day <numero> <white>- Cambia el día <gray>(Solo OP)");
+            MessageUtils.send(player, "<yellow>/hm items <white>- Entrega ítems especiales <gray>(Solo OP)");
+            MessageUtils.send(player, "<yellow>/hm awake <white>- Muestra tiempo sin dormir y riesgo de Phantoms");
             MessageUtils.send(player,
-                    "<yellow>Usa: /hm day [numero], /hm items, /hm awake, /hm mensaje <texto>, /hm lives");
+                    "<yellow>/hm mensaje <1|2> <texto> <white>- Establece mensaje de muerte por vida");
+            MessageUtils.send(player, "<yellow>/hm lives <white>- Muestra tus vidas restantes");
+            MessageUtils.send(player,
+                    "<yellow>/hm resetlives <jugador> <white>- Restablece vidas de un jugador <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm addlife <jugador> <white>- Añade una vida a un jugador <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm reducestorm <horas> <white>- Reduce la duración de la tormenta <gray>(Solo OP)");
             return true;
         }
 
@@ -114,20 +126,58 @@ public class MainCommand implements CommandExecutor {
         }
 
         if (args[0].equalsIgnoreCase("mensaje")) {
+            // Mostrar los mensajes actuales
             if (args.length < 2) {
-                String currentMessage = HMPluggin.getInstance().getConfig()
-                        .getString("death_messages." + player.getUniqueId().toString(), null);
-                if (currentMessage != null) {
-                    MessageUtils.send(player, "<green>Tu mensaje de muerte actual: <white>" + currentMessage);
+                String msg1 = HMPluggin.getInstance().getConfig()
+                        .getString("death_messages." + player.getUniqueId().toString() + ".life1", null);
+                String msg2 = HMPluggin.getInstance().getConfig()
+                        .getString("death_messages." + player.getUniqueId().toString() + ".life2", null);
+
+                MessageUtils.send(player, "<gradient:gold:yellow><bold>═══ TUS MENSAJES DE MUERTE ═══</gradient>");
+                MessageUtils.send(player, "<red>❤❤<dark_gray>❤ <gray>(Primera vida perdida):");
+                if (msg1 != null && !msg1.isEmpty()) {
+                    MessageUtils.send(player, "  <white>" + msg1);
                 } else {
-                    MessageUtils.send(player,
-                            "<yellow>No tienes un mensaje de muerte personalizado. Usa: /hm mensaje <texto>");
+                    MessageUtils.send(player, "  <gray><italic>No configurado");
                 }
+
+                MessageUtils.send(player, "<red>❤<dark_gray>❤❤ <gray>(Segunda vida perdida):");
+                if (msg2 != null && !msg2.isEmpty()) {
+                    MessageUtils.send(player, "  <white>" + msg2);
+                } else {
+                    MessageUtils.send(player, "  <gray><italic>No configurado");
+                }
+
+                MessageUtils.send(player, "<dark_gray>❤❤❤ <gray>(Tercera vida perdida):");
+                MessageUtils.send(player, "  <dark_red><italic>Este es tu final... no hay vuelta atrás.");
+                MessageUtils.send(player, "");
+                MessageUtils.send(player, "<yellow>Usa: /hm mensaje <1|2> <texto> para configurar");
+                return true;
+            }
+
+            // Configurar mensaje específico
+            if (args.length < 3) {
+                MessageUtils.send(player, "<red>Usa: /hm mensaje <1|2> <texto>");
+                MessageUtils.send(player, "<gray>Ejemplo: /hm mensaje 1 Mi primer error...");
+                return true;
+            }
+
+            int lifeNumber;
+            try {
+                lifeNumber = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                MessageUtils.send(player, "<red>El número de vida debe ser 1 o 2");
+                return true;
+            }
+
+            if (lifeNumber != 1 && lifeNumber != 2) {
+                MessageUtils.send(player, "<red>Solo puedes configurar mensajes para la vida 1 o 2");
+                MessageUtils.send(player, "<gray>La tercera vida tiene un mensaje predeterminado");
                 return true;
             }
 
             StringBuilder messageBuilder = new StringBuilder();
-            for (int i = 1; i < args.length; i++) {
+            for (int i = 2; i < args.length; i++) {
                 messageBuilder.append(args[i]);
                 if (i < args.length - 1) {
                     messageBuilder.append(" ");
@@ -140,11 +190,11 @@ public class MainCommand implements CommandExecutor {
                 return true;
             }
 
-            HMPluggin.getInstance().getConfig().set("death_messages." + player.getUniqueId().toString(), customMessage);
+            String configPath = "death_messages." + player.getUniqueId().toString() + ".life" + lifeNumber;
+            HMPluggin.getInstance().getConfig().set(configPath, customMessage);
             HMPluggin.getInstance().saveConfig();
 
-            MessageUtils.send(player,
-                    "<green>¡Mensaje de muerte personalizado guardado! <gray>Se mostrará cuando mueras.");
+            MessageUtils.send(player, "<green>¡Mensaje de vida " + lifeNumber + " guardado!");
             MessageUtils.send(player, "<yellow>Vista previa: <white>" + customMessage);
             return true;
         }
@@ -159,7 +209,7 @@ public class MainCommand implements CommandExecutor {
                 if (i < lives) {
                     livesBar += "<red>❤";
                 } else {
-                    livesBar += "<dark_gray>❤";
+                    livesBar += "<gray>❤";
                 }
             }
 
@@ -232,8 +282,8 @@ public class MainCommand implements CommandExecutor {
             }
 
             try {
-                double hours = Double.parseDouble(args[1]);
-                int ticksToReduce = (int) (hours * 3600 * 20);
+                double stormHours = Double.parseDouble(args[1]);
+                int ticksToReduce = (int) (stormHours * 3600 * 20);
 
                 if (player.getWorld().hasStorm()) {
                     int currentDuration = player.getWorld().getWeatherDuration();
@@ -241,10 +291,10 @@ public class MainCommand implements CommandExecutor {
                     player.getWorld().setWeatherDuration(newDuration);
 
                     double remainingHours = newDuration / 20.0 / 3600.0;
-                    MessageUtils.send(player, "<green>Tormenta reducida en " + hours + " horas. Tiempo restante: "
+                    MessageUtils.send(player, "<green>Tormenta reducida en " + stormHours + " horas. Tiempo restante: "
                             + String.format("%.1f", remainingHours) + " horas");
-                    Bukkit.broadcast(
-                            MessageUtils.format("<blue>⛈ La tormenta ha sido reducida en <bold>" + hours + " horas"));
+                    Bukkit.broadcast(MessageUtils
+                            .format("<blue>⛈ La tormenta ha sido reducida en <bold>" + stormHours + " horas"));
                 } else {
                     MessageUtils.send(player, "<red>No hay ninguna tormenta activa.");
                 }
@@ -254,8 +304,7 @@ public class MainCommand implements CommandExecutor {
             return true;
         }
 
-        MessageUtils.send(player,
-                "<yellow>Comando desconocido. Usa: /hm day, /hm items, /hm awake, /hm mensaje, /hm lives");
+        MessageUtils.send(player, "<yellow>Comando desconocido. Usa: /hm para ver la lista de comandos.");
         return true;
     }
 }
