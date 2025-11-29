@@ -4,6 +4,7 @@ import HM.LuckyDemon.HMPluggin;
 import HM.LuckyDemon.utils.MessageUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -14,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerBedEnterEvent; // <--- Importante
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -36,33 +38,51 @@ public class PlayerListener implements Listener {
         e.quitMessage(MessageUtils.format("<gray>[<red>-<gray>] <yellow>" + e.getPlayer().getName()));
     }
 
+    // NUEVO: Evitar que duerman si hay tormenta (Death Train)
+    @EventHandler
+    public void onBedEnter(PlayerBedEnterEvent e) {
+        if (e.getPlayer().getWorld().hasStorm()) {
+            e.setCancelled(true);
+            MessageUtils.send(e.getPlayer(), "<red>No puedes dormir durante el Death Train. <bold>¡Debes sobrevivir!");
+            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 1.0f);
+        }
+    }
+
     @EventHandler
     public void onDeath(PlayerDeathEvent e) {
         Player player = e.getEntity();
         String victim = player.getName();
 
-        // Mensaje de muerte
-        Component deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim + " ha muerto. <dark_red><bold>¡HA SIDO PERMABANEADO!");
+        // 1. Mensaje y Efectos
+        Component deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim + " ha muerto. <dark_red><bold>¡AHORA ES ESPECTADOR!");
         e.deathMessage(deathMsg);
 
-        // Efectos
         World world = player.getWorld();
         world.strikeLightningEffect(player.getLocation());
         world.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
 
-        // Lógica de BAN
-        if (HMPluggin.getInstance().getConfig().getBoolean("game.ban_enabled", true)) {
-            Bukkit.getScheduler().runTask(HMPluggin.getInstance(), () -> {
-                // Usamos BanList.Type (Estándar de Bukkit) para máxima compatibilidad y evitar errores de import
-                Bukkit.getBanList(org.bukkit.BanList.Type.NAME).addBan(
-                        player.getName(),
-                        "<red><bold>HAS MUERTO EN PERMADEATH<br><br><gray>Fuiste eliminado del evento.",
-                        null, // Null = Permanente
-                        "Permadeath System"
-                );
+        // 2. Lógica de Tormenta (Death Train)
+        int currentDay = HM.LuckyDemon.managers.GameManager.getInstance().getDay();
+        int addedSeconds = currentDay * 3600; // 1 hora por día
+        int addedTicks = addedSeconds * 20;
 
-                player.kick(MessageUtils.format("<red><bold>¡PERMABANEADO!<br><br><gray>Has muerto en Permadeath."));
-            });
+        if (world.hasStorm()) {
+            int currentDuration = world.getWeatherDuration();
+            world.setWeatherDuration(currentDuration + addedTicks);
+            Bukkit.broadcast(MessageUtils.format("<blue>⛈ ¡La tormenta se ha extendido <bold>" + MessageUtils.formatTime(addedSeconds) + "<reset><blue> más!"));
+        } else {
+            world.setStorm(true);
+            world.setWeatherDuration(addedTicks);
+            Bukkit.broadcast(MessageUtils.format("<dark_aqua>⛈ ¡Ha comenzado una tormenta de <bold>" + MessageUtils.formatTime(addedSeconds) + "<reset><dark_aqua>!"));
+        }
+
+        // 3. Modo Espectador y Kick
+        player.setGameMode(GameMode.SPECTATOR);
+
+        if (HMPluggin.getInstance().getConfig().getBoolean("game.ban_enabled", true)) {
+            Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
+                player.kick(MessageUtils.format("<red><bold>HAS MUERTO<br><br><yellow>Has sido convertido en espectador.<br><gray>Puedes volver a entrar para observar."));
+            }, 100L); // 5 segundos de retraso
         }
     }
 
@@ -84,7 +104,6 @@ public class PlayerListener implements Listener {
         if ("hyper".equals(gapType)) {
             AttributeInstance attribute = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
 
-            // Verificación de seguridad para evitar NullPointerException (Warning amarillo)
             if (attribute != null) {
                 double maxHealth = attribute.getBaseValue();
 
@@ -109,7 +128,6 @@ public class PlayerListener implements Listener {
 
     private void updateHealth(Player p) {
         AttributeInstance attribute = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
-        // Verificación de seguridad para evitar NullPointerException (Warning amarillo)
         if (attribute != null && attribute.getBaseValue() < 20.0) {
             attribute.setBaseValue(20.0);
         }

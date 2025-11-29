@@ -27,8 +27,10 @@ public class HMPluggin extends JavaPlugin {
         // Registrar eventos
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.PlayerListener(), this);
 
-        // Iniciar tarea de información (correrá cada 20 ticks = 1 segundo)
-        new HM.LuckyDemon.tasks.InfoTask().runTaskTimer(this, 0L, 20L);
+        // Tarea de Tormenta
+        // Se ejecuta cada 20 ticks (1 segundo) para actualizar el contador
+        new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
+
     }
 
     @Override
