@@ -2,6 +2,7 @@ package HM.LuckyDemon.events;
 
 import HM.LuckyDemon.HMPluggin;
 import HM.LuckyDemon.utils.MessageUtils;
+import HM.LuckyDemon.utils.WebhookUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -88,6 +89,22 @@ public class PlayerListener implements Listener {
         }
         e.deathMessage(deathMsg);
 
+        // Obtener causa de muerte
+        Component deathMessageComponent = e.deathMessage();
+        String deathCause = deathMessageComponent != null ? 
+            net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(deathMessageComponent) : 
+            "Causa desconocida";
+
+        // Enviar al webhook
+        WebhookUtils.sendDeathNotification(
+            player, 
+            deathCause, 
+            remainingLives, 
+            livesManager.getMaxLives(),
+            customMessage != null ? customMessage : ""
+        );
+
+        // Mostrar título en la pantalla del jugador
         player.showTitle(net.kyori.adventure.title.Title.title(
                 MessageUtils.format("<red><bold>¡Permadeath!"),
                 MessageUtils.format("<gray>" + victim + " ha muerto"),
