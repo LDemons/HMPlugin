@@ -55,12 +55,12 @@ public class GameManager {
         if (world.hasStorm()) {
             int secondsLeft = world.getWeatherDuration() / 20;
             // Usamos el mismo formato que en StormTask
-            weatherStatus = " <gray>| <gradient:aqua:blue>⛈ DEATH TRAIN: <white>" + MessageUtils.formatTime(secondsLeft);
+            weatherStatus = " <gray>| <gradient:aqua:blue>⛈ DEATH TRAIN: <white>"
+                    + MessageUtils.formatTime(secondsLeft);
         }
 
         Component actionBar = MessageUtils.format(
-                "<gradient:red:gold><bold>PERMADEATH</gradient> <gray>» <yellow>Día " + currentDay + weatherStatus
-        );
+                "<gradient:red:gold><bold>PERMADEATH</gradient> <gray>» <yellow>Día " + currentDay + weatherStatus);
 
         player.sendActionBar(actionBar);
     }
