@@ -38,13 +38,20 @@ public class PlayerListener implements Listener {
         e.quitMessage(MessageUtils.format("<gray>[<red>-<gray>] <yellow>" + e.getPlayer().getName()));
     }
 
-    // NUEVO: Evitar que duerman si hay tormenta (Death Train)
+    // Modificación: Resetea Phantoms pero protege la tormenta
     @EventHandler
     public void onBedEnter(PlayerBedEnterEvent e) {
         if (e.getPlayer().getWorld().hasStorm()) {
+            // 1. Evitamos que duerma (para no quitar la tormenta)
             e.setCancelled(true);
-            MessageUtils.send(e.getPlayer(), "<red>No puedes dormir durante el Death Train. <bold>¡Debes sobrevivir!");
-            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 1.0f);
+
+            // 2. ¡TRUCO! Reseteamos la estadística de descanso manualmente
+            // Esto hace que el juego crea que durmió y reinicia el contador de Phantoms a 0
+            e.getPlayer().setStatistic(org.bukkit.Statistic.TIME_SINCE_REST, 0);
+
+            // 3. Mensaje de feedback
+            MessageUtils.send(e.getPlayer(), "<aqua>El estruendo de la tormenta no te deja dormir... <gray>(Pero te has relajado, <green>los Phantoms se han reiniciado<gray>)");
+            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.8f);
         }
     }
 

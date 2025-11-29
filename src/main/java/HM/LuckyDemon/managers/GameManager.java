@@ -47,23 +47,21 @@ public class GameManager {
         setDay(currentDay + 1);
     }
 
-    // Nuevo método para mostrar la info a un jugador específico (Action Bar)
+    // Nuevo metodo para mostrar la info a un jugador específico (Action Bar)
     public void showInfo(Player player) {
         World world = player.getWorld();
 
-        // Calculamos tiempo de tormenta si está lloviendo
         String weatherStatus = "";
         if (world.hasStorm()) {
             int secondsLeft = world.getWeatherDuration() / 20;
-            weatherStatus = " <gray>| <blue>⛈ " + MessageUtils.formatTime(secondsLeft);
+            // Usamos el mismo formato que en StormTask
+            weatherStatus = " <gray>| <gradient:aqua:blue>⛈ DEATH TRAIN: <white>" + MessageUtils.formatTime(secondsLeft);
         }
 
-        // Creamos el mensaje
         Component actionBar = MessageUtils.format(
                 "<gradient:red:gold><bold>PERMADEATH</gradient> <gray>» <yellow>Día " + currentDay + weatherStatus
         );
 
-        // Se lo enviamos al jugador
         player.sendActionBar(actionBar);
     }
 }
