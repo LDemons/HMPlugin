@@ -62,8 +62,7 @@ public class PlayerListener implements Listener {
             e.setCancelled(true);
             int specialDay = HMPlugin.getInstance().getDifficultyManager().getSpecialRulesDay();
             MessageUtils.send(e.getPlayer(),
-                    "<red>☠ A partir del d\u00eda " + specialDay
-                            + ", la noche no se puede saltar. El ciclo continúa...");
+                    "<red>☠ A partir del día " + specialDay + ", la noche no se puede saltar. El ciclo continúa...");
             e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_ENDERMAN_SCREAM, 0.5f, 0.8f);
             return;
         }
@@ -122,6 +121,21 @@ public class PlayerListener implements Listener {
             // Eliminar todos los drops y experiencia
             e.getDrops().clear();
             e.setDroppedExp(0);
+        }
+
+        // Ravager especial con Tótem de Inmortalidad (1% chance, día 20+)
+        if (e.getEntity() instanceof org.bukkit.entity.Ravager) {
+            org.bukkit.entity.Ravager ravager = (org.bukkit.entity.Ravager) e.getEntity();
+
+            // Verificar si tiene el nombre especial (marcado en DifficultyManager)
+            if (ravager.customName() != null &&
+                    ravager.customName().toString().contains("Ravager Especial")) {
+
+                // 1% de probabilidad de dropear T ótem
+                if (new java.util.Random().nextInt(100) == 0) {
+                    e.getDrops().add(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TOTEM_OF_UNDYING));
+                }
+            }
         }
     }
 
