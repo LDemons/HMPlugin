@@ -1,7 +1,6 @@
 package HM.LuckyDemon.events;
 
 import HM.LuckyDemon.HMPlugin;
-import org.bukkit.entity.Spider;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -14,10 +13,8 @@ public class EntityListener implements Listener {
     }
 
     @EventHandler
-    public void onSpiderSpawn(CreatureSpawnEvent event) {
-        if (event.getEntity() instanceof Spider) {
-            Spider spider = (Spider) event.getEntity();
-            plugin.getDifficultyManager().applySpiderEffects(spider);
-        }
+    public void onCreatureSpawn(CreatureSpawnEvent event) {
+        // Delegar al DifficultyManager para aplicar efectos a cualquier mob
+        plugin.getDifficultyManager().applyMobEffects(event.getEntity());
     }
 }

@@ -39,15 +39,17 @@ public class HMItems {
     }
 
     // --- Netherite Infernal (Armadura) ---
-    // En el código original era armadura de cuero tintada de rojo con atributos bestiales.
+    // En el código original era armadura de cuero tintada de rojo con atributos
+    // bestiales.
 
     public static ItemStack craftInfernalHelmet() {
         return new ItemBuilder(Material.LEATHER_HELMET)
                 .name("<dark_purple>Infernal Netherite Helmet")
                 .color(Color.fromRGB(16711680)) // Rojo puro
                 .unbreakable(true)
-                .attribute(Attribute.GENERIC_ARMOR, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.HEAD)
-                .attribute(Attribute.GENERIC_ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.HEAD)
+                .attribute(Attribute.ARMOR, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.HEAD)
+                .attribute(Attribute.ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.HEAD)
                 .pdc("tier", "infernal")
                 .build();
     }
@@ -57,8 +59,9 @@ public class HMItems {
                 .name("<dark_purple>Infernal Netherite Chestplate")
                 .color(Color.fromRGB(16711680))
                 .unbreakable(true)
-                .attribute(Attribute.GENERIC_ARMOR, 8, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST)
-                .attribute(Attribute.GENERIC_ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST)
+                .attribute(Attribute.ARMOR, 8, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST)
+                .attribute(Attribute.ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.CHEST)
                 .pdc("tier", "infernal")
                 .build();
     }
@@ -68,8 +71,9 @@ public class HMItems {
                 .name("<dark_purple>Infernal Netherite Leggings")
                 .color(Color.fromRGB(16711680))
                 .unbreakable(true)
-                .attribute(Attribute.GENERIC_ARMOR, 6, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.LEGS)
-                .attribute(Attribute.GENERIC_ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.LEGS)
+                .attribute(Attribute.ARMOR, 6, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.LEGS)
+                .attribute(Attribute.ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.LEGS)
                 .pdc("tier", "infernal")
                 .build();
     }
@@ -79,8 +83,9 @@ public class HMItems {
                 .name("<dark_purple>Infernal Netherite Boots")
                 .color(Color.fromRGB(16711680))
                 .unbreakable(true)
-                .attribute(Attribute.GENERIC_ARMOR, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.FEET)
-                .attribute(Attribute.GENERIC_ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.FEET)
+                .attribute(Attribute.ARMOR, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.FEET)
+                .attribute(Attribute.ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.FEET)
                 .pdc("tier", "infernal")
                 .build();
     }
@@ -91,8 +96,9 @@ public class HMItems {
                 .name("<dark_purple>Elytras de Netherite Infernal")
                 .modelData(1)
                 .unbreakable(true)
-                .attribute(Attribute.GENERIC_ARMOR, 8, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST)
-                .attribute(Attribute.GENERIC_ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST)
+                .attribute(Attribute.ARMOR, 8, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST)
+                .attribute(Attribute.ARMOR_TOUGHNESS, 3, AttributeModifier.Operation.ADD_NUMBER,
+                        EquipmentSlotGroup.CHEST)
                 .pdc("tier", "infernal")
                 .build();
     }

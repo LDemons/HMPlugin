@@ -19,7 +19,9 @@ import org.bukkit.block.Skull;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -31,7 +33,14 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 public class PlayerListener implements Listener {
+
+    // Set para rastrear jugadores que ya vieron el mensaje de PvP
+    private final Set<UUID> pvpMessageShown = new HashSet<>();
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
@@ -42,10 +51,23 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         e.quitMessage(MessageUtils.format("<gray>[<red>-<gray>] <yellow>" + e.getPlayer().getName()));
+        // Limpiar el registro cuando el jugador sale
+        pvpMessageShown.remove(e.getPlayer().getUniqueId());
     }
 
     @EventHandler
     public void onBedEnter(PlayerBedEnterEvent e) {
+        // Verificar si se puede saltar la noche según el día
+        if (!HMPlugin.getInstance().getDifficultyManager().canSkipNight()) {
+            e.setCancelled(true);
+            int specialDay = HMPlugin.getInstance().getDifficultyManager().getSpecialRulesDay();
+            MessageUtils.send(e.getPlayer(),
+                    "<red>☠ A partir del d\u00eda " + specialDay
+                            + ", la noche no se puede saltar. El ciclo continúa...");
+            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_ENDERMAN_SCREAM, 0.5f, 0.8f);
+            return;
+        }
+
         if (e.getPlayer().getWorld().hasStorm()) {
             e.setCancelled(true);
             e.getPlayer().setStatistic(org.bukkit.Statistic.TIME_SINCE_REST, 0);
@@ -78,7 +100,28 @@ public class PlayerListener implements Listener {
         if (e.getDamager() instanceof Player && e.getEntity() instanceof Player) {
             e.setCancelled(true);
             Player attacker = (Player) e.getDamager();
-            MessageUtils.send(attacker, "<red>⚔ El PvP está deshabilitado en este servidor.");
+
+            // Mostrar mensaje solo la primera vez en la sesión
+            if (!pvpMessageShown.contains(attacker.getUniqueId())) {
+                MessageUtils.send(attacker, "<red>⚔ El PvP está deshabilitado en este servidor.");
+                pvpMessageShown.add(attacker.getUniqueId());
+            }
+        }
+    }
+
+    @EventHandler
+    public void onCreatureSpawn(CreatureSpawnEvent e) {
+        // Delegar al DifficultyManager para aplicar efectos según el tipo de mob
+        HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent e) {
+        // Verificar si la entidad debe soltar drops según el día actual
+        if (!HMPlugin.getInstance().getDifficultyManager().shouldDropItems(e.getEntity())) {
+            // Eliminar todos los drops y experiencia
+            e.getDrops().clear();
+            e.setDroppedExp(0);
         }
     }
 
@@ -241,7 +284,7 @@ public class PlayerListener implements Listener {
         String gapType = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 
         if ("hyper".equals(gapType)) {
-            AttributeInstance attribute = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+            AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
 
             if (attribute != null) {
                 double maxHealth = attribute.getBaseValue();
@@ -266,7 +309,7 @@ public class PlayerListener implements Listener {
     }
 
     private void updateHealth(Player p) {
-        AttributeInstance attribute = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
         if (attribute != null && attribute.getBaseValue() < 20.0) {
             attribute.setBaseValue(20.0);
         }
