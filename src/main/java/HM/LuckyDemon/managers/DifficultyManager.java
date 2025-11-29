@@ -100,6 +100,12 @@ public class DifficultyManager {
             if (entity instanceof Spider) {
                 applySpiderEffects((Spider) entity);
             }
+
+            // Creaking: Speed I y Strength I (compatible con versiones nuevas)
+            if (entity.getType().name().equals("CREAKING")) {
+                applyCreakingEffects(entity);
+            }
+
             // Aquí se pueden agregar más mobs en el futuro
             // if (entity instanceof Zombie) { applyZombieEffects((Zombie) entity); }
         }
@@ -149,6 +155,19 @@ public class DifficultyManager {
         if (type.equals(PotionEffectType.RESISTANCE))
             return 2; // Resistencia III
         return 0; // Sin amplificador para otros efectos
+    }
+
+    /**
+     * Aplicar efectos al Creaking según dificultad
+     * Día 10+: Speed I y Strength I
+     */
+    private void applyCreakingEffects(LivingEntity creaking) {
+        int duration = Integer.MAX_VALUE; // Efecto permanente
+
+        // Velocidad I
+        creaking.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, duration, 0));
+        // Fuerza I
+        creaking.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, duration, 0));
     }
 
     // ========== REGLAS SEGÚN DÍA ==========
