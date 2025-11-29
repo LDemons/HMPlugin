@@ -47,6 +47,22 @@ public class PlayerListener implements Listener {
             MessageUtils.send(e.getPlayer(),
                     "<aqua>El estruendo de la tormenta no te deja dormir... <gray>(Pero te has relajado, <green>los Phantoms se han reiniciado<gray>)");
             e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.8f);
+            return;
+        }
+
+        // Verificar jugadores mínimos requeridos según dificultad
+        int minPlayers = HMPlugin.getInstance().getDifficultyManager().getMinimumPlayersRequired();
+        long onlinePlayers = Bukkit.getOnlinePlayers().stream()
+                .filter(p -> p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
+                .count();
+
+        if (onlinePlayers < minPlayers) {
+            e.setCancelled(true);
+            MessageUtils.send(e.getPlayer(),
+                    "<red>⚠ Se requieren al menos <bold>" + minPlayers + " jugadores</bold> en línea para pasar la noche.");
+            MessageUtils.send(e.getPlayer(),
+                    "<gray>Actualmente hay <yellow>" + onlinePlayers + "<gray> jugador(es) conectado(s).");
+            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }
 

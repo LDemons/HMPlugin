@@ -43,6 +43,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     "<yellow>/hm addlife <jugador> <white>- Añade una vida a un jugador <gray>(Solo OP)");
             MessageUtils.send(player,
                     "<yellow>/hm reducestorm <horas> <white>- Reduce la duración de la tormenta <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm resetdifficulty <white>- Resetea la dificultad y el día <gray>(Solo OP)");
             return true;
         }
 
@@ -310,6 +312,18 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("resetdifficulty")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+
+            // Resetear tanto el GameManager como el DifficultyManager
+            GameManager.getInstance().reset();
+            MessageUtils.send(player, "<green>¡Dificultad y día reseteados a 0!");
+            return true;
+        }
+
         MessageUtils.send(player, "<yellow>Comando desconocido. Usa: /hm para ver la lista de comandos.");
         return true;
     }
@@ -322,7 +336,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
-                    "addlife", "reducestorm");
+                    "addlife", "reducestorm", "resetdifficulty");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());

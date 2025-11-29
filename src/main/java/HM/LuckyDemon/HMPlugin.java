@@ -1,9 +1,11 @@
 package HM.LuckyDemon;
 
+import HM.LuckyDemon.managers.DifficultyManager;
 import HM.LuckyDemon.utils.MessageUtils;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class HMPlugin extends JavaPlugin {
+    private DifficultyManager difficultyManager;
 
     private static HMPlugin instance;
 
@@ -26,10 +28,13 @@ public class HMPlugin extends JavaPlugin {
 
         // Registrar eventos
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.PlayerListener(), this);
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.EntityListener(this), this);
 
         // Tarea de Tormenta
         // Se ejecuta cada 20 ticks (1 segundo) para actualizar el contador
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
+
+        difficultyManager = new DifficultyManager(this);
 
     }
 
@@ -38,11 +43,13 @@ public class HMPlugin extends JavaPlugin {
         MessageUtils.send(this.getServer().getConsoleSender(), "<red>Permadeath desactivado.");
     }
 
-
-
     // Metodo estático para obtener la instancia del plugin desde cualquier lado
 
     public static HMPlugin getInstance() {
         return instance;
+    }
+
+    public DifficultyManager getDifficultyManager() {
+        return difficultyManager;
     }
 }

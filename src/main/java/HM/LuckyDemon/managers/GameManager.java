@@ -36,8 +36,19 @@ public class GameManager {
         HMPlugin.getInstance().getConfig().set("game.day", day);
         HMPlugin.getInstance().saveConfig();
 
+        // Sincronizar con DifficultyManager
+        HMPlugin.getInstance().getDifficultyManager().setCurrentDay(day);
+
         // Anunciar cambio
         Bukkit.broadcast(MessageUtils.format("<yellow>¡El tiempo ha cambiado! Ahora es el día <red><bold>" + day));
+        
+        // Anunciar si hubo cambio de dificultad
+        int diffLevel = HMPlugin.getInstance().getDifficultyManager().getDifficultyLevel();
+        if (diffLevel > 0 && day % 10 == 0) {
+            Bukkit.broadcast(MessageUtils.format("<red><bold>⚠ ¡NIVEL DE DIFICULTAD AUMENTADO! ⚠"));
+            Bukkit.broadcast(MessageUtils.format("<gold>La supervivencia será más difícil..."));
+        }
+        
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         }
@@ -45,6 +56,25 @@ public class GameManager {
 
     public void advanceDay() {
         setDay(currentDay + 1);
+        // El incremento de dificultad se maneja en setDay()
+    }
+
+    public void reset() {
+        // Resetear días en GameManager
+        this.currentDay = 0;
+        HMPlugin.getInstance().getConfig().set("game.day", 0);
+        HMPlugin.getInstance().saveConfig();
+        
+        // Resetear dificultad en DifficultyManager
+        HMPlugin.getInstance().getDifficultyManager().reset();
+        
+        // Anunciar reset
+        Bukkit.broadcast(MessageUtils.format("<gold>⚠ El juego ha sido reseteado al día 0"));
+        
+        // Reproducir sonido para todos los jugadores
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.0f);
+        }
     }
 
     // Nuevo metodo para mostrar la info a un jugador específico (Action Bar)
