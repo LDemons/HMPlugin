@@ -1,6 +1,6 @@
 package HM.LuckyDemon.events;
 
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 import HM.LuckyDemon.utils.MessageUtils;
 import HM.LuckyDemon.utils.WebhookUtils;
 import net.kyori.adventure.text.Component;
@@ -55,7 +55,7 @@ public class PlayerListener implements Listener {
         Player player = e.getEntity();
         String victim = player.getName();
 
-        Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
+        Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             player.spigot().respawn();
         }, 1L);
 
@@ -68,10 +68,10 @@ public class PlayerListener implements Listener {
         // Obtener el mensaje correspondiente
         String customMessage = null;
         if (lostLifeNumber == 1) {
-            customMessage = HMPluggin.getInstance().getConfig()
+            customMessage = HMPlugin.getInstance().getConfig()
                     .getString("death_messages." + player.getUniqueId().toString() + ".life1", null);
         } else if (lostLifeNumber == 2) {
-            customMessage = HMPluggin.getInstance().getConfig()
+            customMessage = HMPlugin.getInstance().getConfig()
                     .getString("death_messages." + player.getUniqueId().toString() + ".life2", null);
         } else if (lostLifeNumber == 3) {
             // Mensaje predeterminado para la tercera vida (final)
@@ -133,14 +133,14 @@ public class PlayerListener implements Listener {
                     + MessageUtils.formatTime(addedSeconds) + "<reset><dark_aqua>!"));
         }
 
-        Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
+        Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             player.setGameMode(GameMode.SPECTATOR);
 
             if (remainingLives > 0) {
                 MessageUtils.send(player, "<yellow>Volverás al juego en 5 segundos... (<green>" + remainingLives
                         + " vidas restantes<yellow>)");
 
-                Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
+                Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                     player.setGameMode(GameMode.SURVIVAL);
                     player.setHealth(20.0);
                     player.setFoodLevel(20);
@@ -174,8 +174,8 @@ public class PlayerListener implements Listener {
             } else {
                 MessageUtils.send(player, "<dark_red><bold>¡TE HAS QUEDADO SIN VIDAS!");
 
-                if (HMPluggin.getInstance().getConfig().getBoolean("game.ban_enabled", true)) {
-                    Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
+                if (HMPlugin.getInstance().getConfig().getBoolean("game.ban_enabled", true)) {
+                    Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                         player.kick(MessageUtils.format(
                                 "<red><bold>TE QUEDASTE SIN VIDAS<br><br><yellow>Has perdido todas tus vidas.<br><gray>Contacta a un administrador para volver."));
                     }, 100L);
@@ -195,7 +195,7 @@ public class PlayerListener implements Listener {
         ItemMeta meta = item.getItemMeta();
         Player p = e.getPlayer();
 
-        NamespacedKey key = new NamespacedKey(HMPluggin.getInstance(), "gap_type");
+        NamespacedKey key = new NamespacedKey(HMPlugin.getInstance(), "gap_type");
 
         if (!meta.getPersistentDataContainer().has(key, PersistentDataType.STRING))
             return;

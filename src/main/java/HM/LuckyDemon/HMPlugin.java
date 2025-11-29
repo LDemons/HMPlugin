@@ -3,9 +3,9 @@ package HM.LuckyDemon;
 import HM.LuckyDemon.utils.MessageUtils;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class HMPluggin extends JavaPlugin {
+public class HMPlugin extends JavaPlugin {
 
-    private static HMPluggin instance;
+    private static HMPlugin instance;
 
     @Override
     public void onEnable() {
@@ -42,7 +42,7 @@ public class HMPluggin extends JavaPlugin {
 
     // Metodo estático para obtener la instancia del plugin desde cualquier lado
 
-    public static HMPluggin getInstance() {
+    public static HMPlugin getInstance() {
         return instance;
     }
 }

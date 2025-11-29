@@ -1,6 +1,6 @@
 package HM.LuckyDemon.recipes;
 
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 import HM.LuckyDemon.items.HMItems;
 import HM.LuckyDemon.utils.ItemBuilder;
 import org.bukkit.Material;
@@ -127,7 +127,7 @@ public class RecipeManager {
 
     // Método para recetas con forma (Crafting Table normal)
     private static void registerShaped(String keyName, ItemStack result, String line1, String line2, String line3, Object... ingredients) {
-        NamespacedKey key = new NamespacedKey(HMPluggin.getInstance(), keyName);
+        NamespacedKey key = new NamespacedKey(HMPlugin.getInstance(), keyName);
         ShapedRecipe recipe = new ShapedRecipe(key, result);
         recipe.shape(line1, line2, line3);
 
@@ -138,8 +138,8 @@ public class RecipeManager {
         }
 
         // Registrar solo si no existe (para evitar errores al recargar)
-        if (HMPluggin.getInstance().getServer().getRecipe(key) == null) {
-            HMPluggin.getInstance().getServer().addRecipe(recipe);
+        if (HMPlugin.getInstance().getServer().getRecipe(key) == null) {
+            HMPlugin.getInstance().getServer().addRecipe(recipe);
         }
     }
 }

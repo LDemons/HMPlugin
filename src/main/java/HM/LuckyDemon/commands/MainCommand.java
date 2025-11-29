@@ -1,6 +1,6 @@
 package HM.LuckyDemon.commands;
 
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 import HM.LuckyDemon.items.HMItems;
 import HM.LuckyDemon.managers.GameManager;
 import HM.LuckyDemon.utils.MessageUtils;
@@ -134,9 +134,9 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("mensaje")) {
             // Mostrar los mensajes actuales
             if (args.length < 2) {
-                String msg1 = HMPluggin.getInstance().getConfig()
+                String msg1 = HMPlugin.getInstance().getConfig()
                         .getString("death_messages." + player.getUniqueId().toString() + ".life1", null);
-                String msg2 = HMPluggin.getInstance().getConfig()
+                String msg2 = HMPlugin.getInstance().getConfig()
                         .getString("death_messages." + player.getUniqueId().toString() + ".life2", null);
 
                 MessageUtils.send(player, "<gradient:gold:yellow><bold>═══ TUS MENSAJES DE MUERTE ═══</gradient>");
@@ -197,8 +197,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             }
 
             String configPath = "death_messages." + player.getUniqueId().toString() + ".life" + lifeNumber;
-            HMPluggin.getInstance().getConfig().set(configPath, customMessage);
-            HMPluggin.getInstance().saveConfig();
+            HMPlugin.getInstance().getConfig().set(configPath, customMessage);
+            HMPlugin.getInstance().saveConfig();
 
             MessageUtils.send(player, "<green>¡Mensaje de vida " + lifeNumber + " guardado!");
             MessageUtils.send(player, "<yellow>Vista previa: <white>" + customMessage);

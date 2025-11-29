@@ -1,6 +1,6 @@
 package HM.LuckyDemon.utils;
 
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Color;
 import org.bukkit.Material;
@@ -95,7 +95,7 @@ public class ItemBuilder {
     public ItemBuilder attribute(Attribute attribute, double amount, AttributeModifier.Operation operation, EquipmentSlotGroup slot) {
         if (meta != null) {
             // En 1.21 se usa NamespacedKey y EquipmentSlotGroup
-            NamespacedKey key = new NamespacedKey(HMPluggin.getInstance(), UUID.randomUUID().toString());
+            NamespacedKey key = new NamespacedKey(HMPlugin.getInstance(), UUID.randomUUID().toString());
             AttributeModifier modifier = new AttributeModifier(key, amount, operation, slot);
             meta.addAttributeModifier(attribute, modifier);
         }
@@ -108,7 +108,7 @@ public class ItemBuilder {
      */
     public ItemBuilder pdc(String key, String value) {
         if (meta != null) {
-            NamespacedKey nsKey = new NamespacedKey(HMPluggin.getInstance(), key);
+            NamespacedKey nsKey = new NamespacedKey(HMPlugin.getInstance(), key);
             meta.getPersistentDataContainer().set(nsKey, PersistentDataType.STRING, value);
         }
         return this;

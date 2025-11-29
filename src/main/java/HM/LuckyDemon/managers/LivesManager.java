@@ -1,6 +1,6 @@
 package HM.LuckyDemon.managers;
 
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 import org.bukkit.entity.Player;
 
 public class LivesManager {
@@ -22,15 +22,15 @@ public class LivesManager {
      * Obtiene las vidas restantes de un jugador
      */
     public int getLives(Player player) {
-        return HMPluggin.getInstance().getConfig().getInt("player_lives." + player.getUniqueId().toString(), MAX_LIVES);
+        return HMPlugin.getInstance().getConfig().getInt("player_lives." + player.getUniqueId().toString(), MAX_LIVES);
     }
 
     /**
      * Establece las vidas de un jugador
      */
     public void setLives(Player player, int lives) {
-        HMPluggin.getInstance().getConfig().set("player_lives." + player.getUniqueId().toString(), lives);
-        HMPluggin.getInstance().saveConfig();
+        HMPlugin.getInstance().getConfig().set("player_lives." + player.getUniqueId().toString(), lives);
+        HMPlugin.getInstance().saveConfig();
     }
 
     /**

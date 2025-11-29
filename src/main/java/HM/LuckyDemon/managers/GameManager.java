@@ -1,6 +1,6 @@
 package HM.LuckyDemon.managers;
 
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 import HM.LuckyDemon.utils.MessageUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -16,7 +16,7 @@ public class GameManager {
     // Constructor privado (Singleton)
     private GameManager() {
         // Cargar el día desde la config. Si no existe, es día 1.
-        this.currentDay = HMPluggin.getInstance().getConfig().getInt("game.day", 1);
+        this.currentDay = HMPlugin.getInstance().getConfig().getInt("game.day", 1);
     }
 
     public static GameManager getInstance() {
@@ -33,8 +33,8 @@ public class GameManager {
     public void setDay(int day) {
         this.currentDay = day;
         // Guardar en config para no perder el progreso al reiniciar
-        HMPluggin.getInstance().getConfig().set("game.day", day);
-        HMPluggin.getInstance().saveConfig();
+        HMPlugin.getInstance().getConfig().set("game.day", day);
+        HMPlugin.getInstance().saveConfig();
 
         // Anunciar cambio
         Bukkit.broadcast(MessageUtils.format("<yellow>¡El tiempo ha cambiado! Ahora es el día <red><bold>" + day));

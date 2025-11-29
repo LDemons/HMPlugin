@@ -1,6 +1,6 @@
-main: HM.LuckyDemon.HMPluggin
+main: HM.LuckyDemon.HMPlugin
 version: 1.0.0
-name: HMPluggin
+name: HMPlugin
 author: LuckyDemons
 api-version: 1.21
 

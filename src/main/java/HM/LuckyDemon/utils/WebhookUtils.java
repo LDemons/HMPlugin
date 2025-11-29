@@ -3,7 +3,7 @@ package HM.LuckyDemon.utils;
 import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import HM.LuckyDemon.HMPluggin;
+import HM.LuckyDemon.HMPlugin;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -15,7 +15,7 @@ public class WebhookUtils {
     private static final String WEBHOOK_URL = "https://n8n.warevision.net/webhook/a3062da4-c838-48f8-b355-2a82065a798f";
 
     public static void sendDeathNotification(Player player, String deathCause, int remainingLives, int maxLives, String deathMessage) {
-        Bukkit.getScheduler().runTaskAsynchronously(HMPluggin.getInstance(), () -> {
+        Bukkit.getScheduler().runTaskAsynchronously(HMPlugin.getInstance(), () -> {
             try {
                 URL url = new URL(WEBHOOK_URL);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
