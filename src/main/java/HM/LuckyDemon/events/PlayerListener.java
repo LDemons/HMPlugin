@@ -6,15 +6,20 @@ import HM.LuckyDemon.utils.WebhookUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.block.Block;
+import org.bukkit.block.Skull;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -59,7 +64,8 @@ public class PlayerListener implements Listener {
         if (onlinePlayers < minPlayers) {
             e.setCancelled(true);
             MessageUtils.send(e.getPlayer(),
-                    "<red>⚠ Se requieren al menos <bold>" + minPlayers + " jugadores</bold> en línea para pasar la noche.");
+                    "<red>⚠ Se requieren al menos <bold>" + minPlayers
+                            + " jugadores</bold> en línea para pasar la noche.");
             MessageUtils.send(e.getPlayer(),
                     "<gray>Actualmente hay <yellow>" + onlinePlayers + "<gray> jugador(es) conectado(s).");
             e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
@@ -67,9 +73,20 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
+    public void onPvP(EntityDamageByEntityEvent e) {
+        // Cancelar PvP entre jugadores
+        if (e.getDamager() instanceof Player && e.getEntity() instanceof Player) {
+            e.setCancelled(true);
+            Player attacker = (Player) e.getDamager();
+            MessageUtils.send(attacker, "<red>⚔ El PvP está deshabilitado en este servidor.");
+        }
+    }
+
+    @EventHandler
     public void onDeath(PlayerDeathEvent e) {
         Player player = e.getEntity();
         String victim = player.getName();
+        Location deathLocation = player.getLocation();
 
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             player.spigot().respawn();
@@ -77,6 +94,11 @@ public class PlayerListener implements Listener {
 
         HM.LuckyDemon.managers.LivesManager livesManager = HM.LuckyDemon.managers.LivesManager.getInstance();
         int remainingLives = livesManager.removeLife(player);
+
+        // Crear monumento de muerte solo cuando el jugador pierde todas sus vidas
+        if (remainingLives == 0) {
+            createDeathMonument(player, deathLocation);
+        }
 
         // Determinar qué vida se perdió (3 - remaining = vida perdida)
         int lostLifeNumber = livesManager.getMaxLives() - remainingLives;
@@ -107,18 +129,18 @@ public class PlayerListener implements Listener {
 
         // Obtener causa de muerte
         Component deathMessageComponent = e.deathMessage();
-        String deathCause = deathMessageComponent != null ? 
-            net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(deathMessageComponent) : 
-            "Causa desconocida";
+        String deathCause = deathMessageComponent != null
+                ? net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                        .serialize(deathMessageComponent)
+                : "Causa desconocida";
 
         // Enviar al webhook
         WebhookUtils.sendDeathNotification(
-            player, 
-            deathCause, 
-            remainingLives, 
-            livesManager.getMaxLives(),
-            customMessage != null ? customMessage : ""
-        );
+                player,
+                deathCause,
+                remainingLives,
+                livesManager.getMaxLives(),
+                customMessage != null ? customMessage : "");
 
         // Mostrar título en la pantalla del jugador
         player.showTitle(net.kyori.adventure.title.Title.title(
@@ -247,6 +269,35 @@ public class PlayerListener implements Listener {
         AttributeInstance attribute = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
         if (attribute != null && attribute.getBaseValue() < 20.0) {
             attribute.setBaseValue(20.0);
+        }
+    }
+
+    /**
+     * Crea un monumento de muerte en la ubicación donde murió el jugador.
+     * Solo se crea cuando el jugador pierde todas sus vidas.
+     * Estructura: Bedrock reemplaza el bloque de abajo, valla del nether en la
+     * posición de muerte, cabeza arriba.
+     */
+    private void createDeathMonument(Player player, Location location) {
+        Location loc = location.getBlock().getLocation();
+
+        // Bedrock reemplaza el bloque de abajo (-1)
+        Block bedrockBlock = loc.clone().add(0, -1, 0).getBlock();
+        bedrockBlock.setType(Material.BEDROCK);
+
+        // Valla del nether en la posición donde murió
+        Block fenceBlock = loc.getBlock();
+        fenceBlock.setType(Material.NETHER_BRICK_FENCE);
+
+        // Cabeza del jugador encima de la valla (+1)
+        Block skullBlock = loc.clone().add(0, 1, 0).getBlock();
+        skullBlock.setType(Material.PLAYER_HEAD);
+
+        // Configurar la cabeza con el skin del jugador
+        if (skullBlock.getState() instanceof Skull) {
+            Skull skull = (Skull) skullBlock.getState();
+            skull.setOwningPlayer((OfflinePlayer) player);
+            skull.update();
         }
     }
 }
