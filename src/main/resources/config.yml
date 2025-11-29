@@ -1,0 +1,17 @@
+# Configuración de HMPluggin (Permadeath Reborn)
+# Versión 1.0.0
+
+# Prefijo que se mostrará en los mensajes del chat
+prefix: "<gradient:red:dark_red>PermaDeath</gradient> <gray>» "
+
+# Configuración de mensajes
+messages:
+  death: "<red>El jugador <yellow>%player% <red>ha muerto y ha sido PERMABANEADO."
+  storm_start: "<dark_red>¡Ha comenzado el Death Train!"
+
+# Opciones de juego
+game:
+  # Día actual del Permadeath
+  day: 1
+  # Activar el ban al morir
+  ban_enabled: true

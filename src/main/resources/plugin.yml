@@ -1,0 +1,11 @@
+main: HM.LuckyDemon.HMPluggin
+version: 1.0.0
+name: HMPluggin
+author: LuckyDemons
+api-version: 1.21
+
+commands:
+  hm:
+    description: Comando principal del plugin
+    usage: /hm items
+    aliases: [permadeath, pdc]

@@ -1,0 +1,46 @@
+package HM.LuckyDemon;
+
+import HM.LuckyDemon.utils.MessageUtils;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public class HMPluggin extends JavaPlugin {
+
+    private static HMPluggin instance;
+
+    @Override
+    public void onEnable() {
+        instance = this;
+
+        // Crear la carpeta de configuración si no existe
+        saveDefaultConfig();
+
+        // Mensaje de inicio en consola usando el nuevo sistema
+        MessageUtils.send(this.getServer().getConsoleSender(), "<gradient:red:dark_red>Permadeath Reborn (HMPluggin) activado correctamente.</gradient>");
+        MessageUtils.send(this.getServer().getConsoleSender(), "<gray>Versión corriendo en: <yellow>" + getServer().getVersion());
+
+        // Registrar comando
+        getCommand("hm").setExecutor(new HM.LuckyDemon.commands.MainCommand());
+
+        // Registrar Recetas
+        HM.LuckyDemon.recipes.RecipeManager.registerRecipes();
+
+        // Registrar eventos
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.PlayerListener(), this);
+
+        // Iniciar tarea de información (correrá cada 20 ticks = 1 segundo)
+        new HM.LuckyDemon.tasks.InfoTask().runTaskTimer(this, 0L, 20L);
+    }
+
+    @Override
+    public void onDisable() {
+        MessageUtils.send(this.getServer().getConsoleSender(), "<red>Permadeath desactivado.");
+    }
+
+
+
+    // Metodo estático para obtener la instancia del plugin desde cualquier lado
+
+    public static HMPluggin getInstance() {
+        return instance;
+    }
+}
