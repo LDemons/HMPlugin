@@ -38,18 +38,11 @@ public class PlayerListener implements Listener {
         e.quitMessage(MessageUtils.format("<gray>[<red>-<gray>] <yellow>" + e.getPlayer().getName()));
     }
 
-    // Modificación: Resetea Phantoms pero protege la tormenta
     @EventHandler
     public void onBedEnter(PlayerBedEnterEvent e) {
         if (e.getPlayer().getWorld().hasStorm()) {
-            // 1. Evitamos que duerma (para no quitar la tormenta)
             e.setCancelled(true);
-
-            // 2. ¡TRUCO! Reseteamos la estadística de descanso manualmente
-            // Esto hace que el juego crea que durmió y reinicia el contador de Phantoms a 0
             e.getPlayer().setStatistic(org.bukkit.Statistic.TIME_SINCE_REST, 0);
-
-            // 3. Mensaje de feedback
             MessageUtils.send(e.getPlayer(),
                     "<aqua>El estruendo de la tormenta no te deja dormir... <gray>(Pero te has relajado, <green>los Phantoms se han reiniciado<gray>)");
             e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.8f);
@@ -61,31 +54,40 @@ public class PlayerListener implements Listener {
         Player player = e.getEntity();
         String victim = player.getName();
 
-        // Hacer que el jugador respawnee inmediatamente (sin pantalla de muerte)
         Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
             player.spigot().respawn();
         }, 1L);
 
-        // 1. Sistema de Vidas
         HM.LuckyDemon.managers.LivesManager livesManager = HM.LuckyDemon.managers.LivesManager.getInstance();
         int remainingLives = livesManager.removeLife(player);
 
-        // 2. Mensaje y Efectos
-        String customMessage = HMPluggin.getInstance().getConfig()
-                .getString("death_messages." + player.getUniqueId().toString(), null);
+        // Determinar qué vida se perdió (3 - remaining = vida perdida)
+        int lostLifeNumber = livesManager.getMaxLives() - remainingLives;
+
+        // Obtener el mensaje correspondiente
+        String customMessage = null;
+        if (lostLifeNumber == 1) {
+            customMessage = HMPluggin.getInstance().getConfig()
+                    .getString("death_messages." + player.getUniqueId().toString() + ".life1", null);
+        } else if (lostLifeNumber == 2) {
+            customMessage = HMPluggin.getInstance().getConfig()
+                    .getString("death_messages." + player.getUniqueId().toString() + ".life2", null);
+        } else if (lostLifeNumber == 3) {
+            // Mensaje predeterminado para la tercera vida (final)
+            customMessage = "Este es tu final... no hay vuelta atrás.";
+        }
 
         Component deathMsg;
         if (customMessage != null && !customMessage.isEmpty()) {
             deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim
                     + " ha muerto. <yellow>Vidas restantes: " + remainingLives + "/" + livesManager.getMaxLives()
-                    + "<br><gray><!bold><italic>" + victim + ", " + customMessage);
+                    + "<br><gray><!bold><italic>\"" + customMessage + "\"");
         } else {
             deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim
                     + " ha muerto. <yellow>Vidas restantes: " + remainingLives + "/" + livesManager.getMaxLives());
         }
         e.deathMessage(deathMsg);
 
-        // Mostrar título en la pantalla del jugador
         player.showTitle(net.kyori.adventure.title.Title.title(
                 MessageUtils.format("<red><bold>¡Permadeath!"),
                 MessageUtils.format("<gray>" + victim + " ha muerto"),
@@ -98,9 +100,8 @@ public class PlayerListener implements Listener {
         world.strikeLightningEffect(player.getLocation());
         world.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
 
-        // 3. Lógica de Tormenta (Death Train)
         int currentDay = HM.LuckyDemon.managers.GameManager.getInstance().getDay();
-        int addedSeconds = currentDay * 3600; // 1 hora por día
+        int addedSeconds = currentDay * 3600;
         int addedTicks = addedSeconds * 20;
 
         if (world.hasStorm()) {
@@ -115,12 +116,10 @@ public class PlayerListener implements Listener {
                     + MessageUtils.formatTime(addedSeconds) + "<reset><dark_aqua>!"));
         }
 
-        // 4. Modo Espectador temporal o permanente
         Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
             player.setGameMode(GameMode.SPECTATOR);
 
             if (remainingLives > 0) {
-                // Tiene vidas: volver a survival después de 5 segundos
                 MessageUtils.send(player, "<yellow>Volverás al juego en 5 segundos... (<green>" + remainingLives
                         + " vidas restantes<yellow>)");
 
@@ -130,45 +129,39 @@ public class PlayerListener implements Listener {
                     player.setFoodLevel(20);
                     player.setSaturation(20.0f);
 
-                    // Mostrar animación de corazones con el que perdió
                     int maxLives = livesManager.getMaxLives();
-
                     StringBuilder heartsDisplay = new StringBuilder();
                     for (int i = 0; i < maxLives; i++) {
                         if (i < remainingLives) {
-                            heartsDisplay.append("❤ ");
+                            heartsDisplay.append("<red>❤ ");
                         } else {
-                            heartsDisplay.append("🖤 "); // Corazón negro para las vidas perdidas
+                            heartsDisplay.append("<gray>❤ ");
                         }
                     }
 
-                    // Sonido dramático
                     player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT, 1.0f, 0.5f);
                     player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5f, 1.5f);
 
-                    // Mostrar título con animación de corazones
                     player.showTitle(net.kyori.adventure.title.Title.title(
                             MessageUtils.format("<gradient:red:dark_red><bold>-1 VIDA</gradient>"),
-                            MessageUtils.format("<red>" + heartsDisplay.toString() + "<br><yellow>" + remainingLives
-                                    + "/" + maxLives + " vidas"),
+                            MessageUtils.format(heartsDisplay.toString() + " <yellow>" + remainingLives + "/" + maxLives
+                                    + " vidas"),
                             net.kyori.adventure.title.Title.Times.times(
-                                    java.time.Duration.ofMillis(500), // Fade in
-                                    java.time.Duration.ofMillis(2500), // Stay
-                                    java.time.Duration.ofMillis(1000) // Fade out
-                    )));
+                                    java.time.Duration.ofMillis(500),
+                                    java.time.Duration.ofMillis(2500),
+                                    java.time.Duration.ofMillis(1000))));
 
                     MessageUtils.send(player, "<green>¡Has regresado al juego! <gray>Te quedan <yellow>"
                             + remainingLives + " vidas<gray>.");
-                }, 100L); // 5 segundos
+                }, 100L);
             } else {
-                // Sin vidas: kickear
                 MessageUtils.send(player, "<dark_red><bold>¡TE HAS QUEDADO SIN VIDAS!");
 
                 if (HMPluggin.getInstance().getConfig().getBoolean("game.ban_enabled", true)) {
                     Bukkit.getScheduler().runTaskLater(HMPluggin.getInstance(), () -> {
                         player.kick(MessageUtils.format(
                                 "<red><bold>TE QUEDASTE SIN VIDAS<br><br><yellow>Has perdido todas tus vidas.<br><gray>Contacta a un administrador para volver."));
-                    }, 100L); // 5 segundos de retraso
+                    }, 100L);
                 }
             }
         }, 2L);
