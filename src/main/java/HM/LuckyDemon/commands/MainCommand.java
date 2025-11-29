@@ -8,10 +8,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-public class MainCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class MainCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
@@ -306,5 +312,64 @@ public class MainCommand implements CommandExecutor {
 
         MessageUtils.send(player, "<yellow>Comando desconocido. Usa: /hm para ver la lista de comandos.");
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
+            @NotNull String[] args) {
+        List<String> completions = new ArrayList<>();
+
+        if (args.length == 1) {
+            // Sugerir subcomandos principales
+            List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
+                    "addlife", "reducestorm");
+            return subcommands.stream()
+                    .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+
+        if (args.length == 2) {
+            String subcommand = args[0].toLowerCase();
+
+            // Comandos que requieren nombre de jugador
+            if (subcommand.equals("resetlives") || subcommand.equals("addlife")) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+
+            // Comando mensaje - sugerir números de vida
+            if (subcommand.equals("mensaje")) {
+                return Arrays.asList("1", "2").stream()
+                        .filter(num -> num.startsWith(args[1]))
+                        .collect(Collectors.toList());
+            }
+
+            // Comando day - sugerir algunos días comunes
+            if (subcommand.equals("day") && sender.isOp()) {
+                return Arrays.asList("1", "2", "3", "5", "10", "15", "20", "30").stream()
+                        .filter(day -> day.startsWith(args[1]))
+                        .collect(Collectors.toList());
+            }
+
+            // Comando reducestorm - sugerir horas comunes
+            if (subcommand.equals("reducestorm") && sender.isOp()) {
+                return Arrays.asList("1", "2", "3", "5", "10", "24").stream()
+                        .filter(hour -> hour.startsWith(args[1]))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        if (args.length == 3) {
+            String subcommand = args[0].toLowerCase();
+
+            // Comando mensaje - sugerir texto de ejemplo
+            if (subcommand.equals("mensaje")) {
+                return Arrays.asList("<texto>", "Mi", "mensaje", "personalizado");
+            }
+        }
+
+        return completions;
     }
 }
