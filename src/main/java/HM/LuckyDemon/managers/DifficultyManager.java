@@ -104,7 +104,8 @@ public class DifficultyManager {
                             Mob mob = (Mob) entity;
 
                             // Verificar si es un mob que debería ser agresivo
-                            if (mob instanceof Animals || mob instanceof AbstractVillager
+                            if (mob instanceof Animals || mob instanceof AbstractVillager || mob instanceof Fish
+                                    || mob instanceof Axolotl || mob instanceof Squid || mob instanceof Dolphin
                                     || mob instanceof org.bukkit.entity.Bat) {
 
                                 // A) SI NO TIENE LA MARCA, DARLE LA IA AGRESIVA AHORA MISMO
@@ -144,7 +145,8 @@ public class DifficultyManager {
 
             // Lógica unificada para hacer agresivos a Mobs pasivos
             // Usamos "Mob" para cubrir Animales, Murciélagos y Aldeanos
-            if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat
+            if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
+                    || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
                     || entity instanceof AbstractVillager) {
                 // 2.0 de daño = 1 corazón
                 makeAggressive((Mob) entity, 2.0);
@@ -373,7 +375,8 @@ public class DifficultyManager {
         }
 
         // 3. Borrar la IA original (Pánico, Huir)
-        if (mob instanceof Animals || mob instanceof AbstractVillager) {
+        if (mob instanceof Animals || mob instanceof AbstractVillager || mob instanceof Fish || mob instanceof Dolphin
+                || mob instanceof Axolotl || mob instanceof Squid) {
             org.bukkit.Bukkit.getMobGoals().removeAllGoals(mob);
         }
 
