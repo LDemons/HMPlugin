@@ -25,6 +25,8 @@ public class DifficultyManager {
         this.plugin = plugin;
         this.random = new Random();
         loadDifficultyData();
+
+        startAggressionTask();
     }
 
     private void loadDifficultyData() {
@@ -83,6 +85,47 @@ public class DifficultyManager {
         saveDifficultyData();
     }
 
+    public void startAggressionTask() {
+        // Tarea repetitiva que corre cada 2 segundos
+        new org.bukkit.scheduler.BukkitRunnable() {
+            @Override
+            public void run() {
+                if (currentDay < 20)
+                    return;
+
+                for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                    if (player.getGameMode() != org.bukkit.GameMode.SURVIVAL
+                            && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
+                        continue;
+
+                    // Escanear entidades cercanas (15 bloques)
+                    for (org.bukkit.entity.Entity entity : player.getNearbyEntities(15, 15, 15)) {
+                        if (entity instanceof Mob) {
+                            Mob mob = (Mob) entity;
+
+                            // Verificar si es un mob que debería ser agresivo
+                            if (mob instanceof Animals || mob instanceof AbstractVillager
+                                    || mob instanceof org.bukkit.entity.Bat) {
+
+                                // A) SI NO TIENE LA MARCA, DARLE LA IA AGRESIVA AHORA MISMO
+                                if (!mob.getPersistentDataContainer().has(
+                                        new org.bukkit.NamespacedKey(plugin, "is_aggressive"),
+                                        org.bukkit.persistence.PersistentDataType.BYTE)) {
+                                    makeAggressive(mob, 2.0);
+                                }
+
+                                // B) Si no tiene objetivo, forzarlo a atacar al jugador
+                                if (mob.getTarget() == null || !mob.getTarget().isValid()) {
+                                    mob.setTarget(player);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 60L, 40L);
+    }
+
     // ========== EFECTOS A MOBS ==========
 
     public void applyMobEffects(LivingEntity entity) {
@@ -98,14 +141,15 @@ public class DifficultyManager {
             if (entity instanceof org.bukkit.entity.Ghast) {
                 makeGhastNormal((org.bukkit.entity.Ghast) entity);
             }
-            // TODOS los animales pasivos son agresivos (sin excluir Tameables)
-            if (entity instanceof Animals) {
-                makeAnimalAggressive((Animals) entity);
+
+            // Lógica unificada para hacer agresivos a Mobs pasivos
+            // Usamos "Mob" para cubrir Animales, Murciélagos y Aldeanos
+            if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat
+                    || entity instanceof AbstractVillager) {
+                // 2.0 de daño = 1 corazón
+                makeAggressive((Mob) entity, 2.0);
             }
-            // Bats también son agresivos (no son Animals, son Ambient)
-            if (entity instanceof org.bukkit.entity.Bat) {
-                makeBatAggressive((org.bukkit.entity.Bat) entity);
-            }
+
             if (entity instanceof PigZombie) {
                 makePigmanAngry((PigZombie) entity);
             }
@@ -313,48 +357,51 @@ public class DifficultyManager {
         }
     }
 
-    @SuppressWarnings("deprecation")
-    private void makeAnimalAggressive(Animals animal) {
-        // Intentar establecer atributo de daño si existe
+    private void makeAggressive(Mob mob, double damage) {
+        // 1. Marcar al mob como "Agresivo" para no repetir esto
+        mob.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "is_aggressive"),
+                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+        // 2. Configurar daño físico
         try {
-            org.bukkit.attribute.AttributeInstance damageAttr = animal
+            org.bukkit.attribute.AttributeInstance damageAttr = mob
                     .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
             if (damageAttr != null) {
-                damageAttr.setBaseValue(2.0); // 1 Corazón de daño base
+                damageAttr.setBaseValue(damage);
             }
         } catch (IllegalArgumentException ignored) {
         }
 
-        // Inyectar IA de ataque usando Paper API
-        org.bukkit.Bukkit.getMobGoals().addGoal(animal, 1, new AggressiveAnimalGoal(animal, plugin));
+        // 3. Borrar la IA original (Pánico, Huir)
+        if (mob instanceof Animals || mob instanceof AbstractVillager) {
+            org.bukkit.Bukkit.getMobGoals().removeAllGoals(mob);
+        }
+
+        // 4. Inyectar IA asesina (Prioridad 0)
+        org.bukkit.Bukkit.getMobGoals().addGoal(mob, 0, new AggressiveMobGoal(mob, plugin, 20.0, damage));
     }
 
-    @SuppressWarnings("deprecation")
-    private void makeBatAggressive(org.bukkit.entity.Bat bat) {
-        // Los Bats no tienen atributo de daño por defecto, pero sí pueden atacar
-        // La IA se encargará de aplicar el daño
-
-        // Inyectar IA de ataque usando Paper API
-        org.bukkit.Bukkit.getMobGoals().addGoal(bat, 1, new AggressiveBatGoal(bat, plugin));
-    }
-
-    // Clase interna para la IA de ataque
-    private static class AggressiveAnimalGoal implements com.destroystokyo.paper.entity.ai.Goal<Animals> {
-        private final Animals entity;
-        private final com.destroystokyo.paper.entity.ai.GoalKey<Animals> key;
+    // Clase interna UNIFICADA para IA de ataque en cualquier Mob
+    private static class AggressiveMobGoal implements com.destroystokyo.paper.entity.ai.Goal<Mob> {
+        private final Mob entity;
+        private final com.destroystokyo.paper.entity.ai.GoalKey<Mob> key;
         private int attackCooldown = 0;
+        private final double range;
+        private final double damage;
 
-        public AggressiveAnimalGoal(Animals entity, HM.LuckyDemon.HMPlugin plugin) {
+        public AggressiveMobGoal(Mob entity, HM.LuckyDemon.HMPlugin plugin, double range, double damage) {
             this.entity = entity;
-            this.key = com.destroystokyo.paper.entity.ai.GoalKey.of(Animals.class,
-                    new org.bukkit.NamespacedKey(plugin, "aggressive_animal"));
+            this.range = range;
+            this.damage = damage;
+            this.key = com.destroystokyo.paper.entity.ai.GoalKey.of(Mob.class,
+                    new org.bukkit.NamespacedKey(plugin, "aggressive_mob"));
         }
 
         @Override
         public boolean shouldActivate() {
-            org.bukkit.entity.LivingEntity target = entity.getTarget();
+            LivingEntity target = entity.getTarget();
 
-            // Si tiene target, verificar si sigue siendo válido
+            // Si ya tiene un target válido, mantenerlo
             if (target != null && !target.isDead()) {
                 if (target instanceof org.bukkit.entity.Player) {
                     org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
@@ -365,9 +412,10 @@ public class DifficultyManager {
                 }
             }
 
-            // Si no tiene target válido, buscar uno nuevo cercano (5 bloques)
+            // Buscar jugador cercano
             org.bukkit.entity.Player nearestPlayer = null;
             double nearestDistance = Double.MAX_VALUE;
+
             for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
                 if (player.getGameMode() != org.bukkit.GameMode.SURVIVAL
                         && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
@@ -377,7 +425,7 @@ public class DifficultyManager {
                     continue;
 
                 double distance = player.getLocation().distance(entity.getLocation());
-                if (distance < nearestDistance && distance < 5.0) { // Rango de visión 5 bloques
+                if (distance < nearestDistance && distance < range) {
                     nearestDistance = distance;
                     nearestPlayer = player;
                 }
@@ -393,160 +441,14 @@ public class DifficultyManager {
 
         @Override
         public boolean shouldStayActive() {
-            org.bukkit.entity.LivingEntity target = entity.getTarget();
-
-            // Si no tiene target, desactivar
-            if (target == null || target.isDead()) {
-                return false;
-            }
-
-            // Si el target está muy lejos (más de 8 bloques), dejar de perseguir
-            double distance = entity.getLocation().distance(target.getLocation());
-            if (distance > 8.0) {
-                return false;
-            }
-
-            // Si el target cambió de gamemode, desactivar
-            if (target instanceof org.bukkit.entity.Player) {
-                org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
-                if (p.getGameMode() != org.bukkit.GameMode.SURVIVAL
-                        && p.getGameMode() != org.bukkit.GameMode.ADVENTURE) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        @Override
-        public void start() {
-            attackCooldown = 0;
-        }
-
-        @Override
-        public void stop() {
-            entity.getPathfinder().stopPathfinding();
-            entity.setTarget(null); // Olvidar target inválido
-        }
-
-        @Override
-        @SuppressWarnings("deprecation")
-        public void tick() {
-            if (attackCooldown > 0) {
-                attackCooldown--;
-            }
-
-            org.bukkit.entity.LivingEntity target = entity.getTarget();
-            if (target == null)
-                return;
-
-            entity.lookAt(target);
-
-            double distSq = entity.getLocation().distanceSquared(target.getLocation());
-
-            // Moverse hacia el objetivo si está a más de 1 bloque (distSq > 1.0)
-            if (distSq > 1.0) {
-                entity.getPathfinder().moveTo(target);
-            }
-
-            // Atacar si está cerca (Reducido a 3.0 = ~1.7 bloques para asegurar hit
-            // cercano)
-            // Y si el cooldown lo permite
-            if (distSq < 3.0 && attackCooldown == 0) {
-                // Usar damage() en lugar de attack() para evitar glitches
-                double damage = 2.0; // 1 Corazón fijo
-                try {
-                    org.bukkit.attribute.AttributeInstance attr = entity
-                            .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
-                    if (attr != null) {
-                        damage = attr.getValue();
-                    }
-                } catch (Exception ignored) {
-                }
-
-                target.damage(damage, entity);
-                entity.swingMainHand();
-
-                // Cooldown de 1 segundo (20 ticks)
-                attackCooldown = 20;
-            }
-        }
-
-        @Override
-        public com.destroystokyo.paper.entity.ai.GoalKey<Animals> getKey() {
-            return key;
-        }
-
-        @Override
-        public java.util.EnumSet<com.destroystokyo.paper.entity.ai.GoalType> getTypes() {
-            return java.util.EnumSet.of(com.destroystokyo.paper.entity.ai.GoalType.MOVE,
-                    com.destroystokyo.paper.entity.ai.GoalType.LOOK);
-        }
-    }
-
-    // Clase interna para la IA de Bats agresivos
-    private static class AggressiveBatGoal implements com.destroystokyo.paper.entity.ai.Goal<org.bukkit.entity.Bat> {
-        private final org.bukkit.entity.Bat entity;
-        private final com.destroystokyo.paper.entity.ai.GoalKey<org.bukkit.entity.Bat> key;
-        private int attackCooldown = 0;
-
-        public AggressiveBatGoal(org.bukkit.entity.Bat entity, HM.LuckyDemon.HMPlugin plugin) {
-            this.entity = entity;
-            this.key = com.destroystokyo.paper.entity.ai.GoalKey.of(org.bukkit.entity.Bat.class,
-                    new org.bukkit.NamespacedKey(plugin, "aggressive_bat"));
-        }
-
-        @Override
-        public boolean shouldActivate() {
-            org.bukkit.entity.LivingEntity target = entity.getTarget();
-
-            if (target != null && !target.isDead()) {
-                if (target instanceof org.bukkit.entity.Player) {
-                    org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
-                    if (p.getGameMode() == org.bukkit.GameMode.SURVIVAL
-                            || p.getGameMode() == org.bukkit.GameMode.ADVENTURE) {
-                        return true;
-                    }
-                }
-            }
-
-            // Buscar jugador cercano (5 bloques)
-            org.bukkit.entity.Player nearestPlayer = null;
-            double nearestDistance = Double.MAX_VALUE;
-            for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
-                if (player.getGameMode() != org.bukkit.GameMode.SURVIVAL
-                        && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
-                    continue;
-
-                if (player.getWorld() != entity.getWorld())
-                    continue;
-
-                double distance = player.getLocation().distance(entity.getLocation());
-                if (distance < nearestDistance && distance < 5.0) {
-                    nearestDistance = distance;
-                    nearestPlayer = player;
-                }
-            }
-
-            if (nearestPlayer != null) {
-                entity.setTarget(nearestPlayer);
-                return true;
-            }
-
-            return false;
-        }
-
-        @Override
-        public boolean shouldStayActive() {
-            org.bukkit.entity.LivingEntity target = entity.getTarget();
+            LivingEntity target = entity.getTarget();
 
             if (target == null || target.isDead()) {
                 return false;
             }
 
-            // Dejar de perseguir si está muy lejos (8 bloques)
             double distance = entity.getLocation().distance(target.getLocation());
-            if (distance > 8.0) {
+            if (distance > range + 5.0) { // Margen extra para no perderlo inmediatamente
                 return false;
             }
 
@@ -578,7 +480,7 @@ public class DifficultyManager {
                 attackCooldown--;
             }
 
-            org.bukkit.entity.LivingEntity target = entity.getTarget();
+            LivingEntity target = entity.getTarget();
             if (target == null)
                 return;
 
@@ -590,18 +492,28 @@ public class DifficultyManager {
                 entity.getPathfinder().moveTo(target);
             }
 
-            // Atacar si está cerca (3.0 = ~1.7 bloques)
+            // Atacar si está cerca (3.0 bloques cuadrados = ~1.7 bloques de distancia)
             if (distSq < 3.0 && attackCooldown == 0) {
-                // Bats hacen 1 corazón de daño
-                target.damage(2.0, entity);
+                double finalDamage = damage;
+                // Intentar obtener daño del atributo si es mayor (por si el mob tiene fuerza)
+                try {
+                    org.bukkit.attribute.AttributeInstance attr = entity
+                            .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
+                    if (attr != null && attr.getValue() > finalDamage) {
+                        finalDamage = attr.getValue();
+                    }
+                } catch (Exception ignored) {
+                }
 
-                // Cooldown de 1 segundo (20 ticks)
-                attackCooldown = 20;
+                target.damage(finalDamage, entity);
+                entity.swingMainHand();
+
+                attackCooldown = 20; // 1 segundo de cooldown entre golpes
             }
         }
 
         @Override
-        public com.destroystokyo.paper.entity.ai.GoalKey<org.bukkit.entity.Bat> getKey() {
+        public com.destroystokyo.paper.entity.ai.GoalKey<Mob> getKey() {
             return key;
         }
 

@@ -111,15 +111,18 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        // Debug: Log cuando spawnea un animal
-        if (e.getEntity() instanceof Animals || e.getEntity() instanceof org.bukkit.entity.Bat) {
-            org.bukkit.Bukkit.getLogger().info("[DEBUG] Mob spawneado: " + e.getEntityType() +
-                    " | Razón: " + e.getSpawnReason() +
-                    " | Día: " + HMPlugin.getInstance().getDifficultyManager().getCurrentDay());
-        }
+        // Debug: Log TODOS los mobs que spawnean
+        org.bukkit.Bukkit.getLogger().info("[DEBUG] Mob spawneado: " + e.getEntityType() +
+                " | Razón: " + e.getSpawnReason() +
+                " | Día: " + HMPlugin.getInstance().getDifficultyManager().getCurrentDay() +
+                " | Es Animal: " + (e.getEntity() instanceof Animals));
 
-        // Delegar al DifficultyManager para aplicar efectos según el tipo de mob
-        HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
+        // Delay de 1 tick para asegurar que el mob esté completamente cargado
+        Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+            if (e.getEntity().isValid() && !e.getEntity().isDead()) {
+                HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
+            }
+        }, 1L);
     }
 
     @EventHandler
