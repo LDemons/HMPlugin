@@ -39,15 +39,15 @@ public class Day20MechanicsListener implements Listener {
     }
 
     /**
-     * DÍA 20: 1% chance de araña de cueva al romper vasijas
+     * DÍA 10: 3% chance de araña de cueva al romper vasijas
      */
     @EventHandler
     public void onVaseBreak(BlockBreakEvent e) {
-        if (GameManager.getInstance().getDay() < 20)
+        if (GameManager.getInstance().getDay() < 10)
             return;
 
         if (e.getBlock().getType() == Material.DECORATED_POT) {
-            if (random.nextInt(100) < 1) { // 1%
+            if (random.nextInt(100) < 3) { // 3%
                 Location loc = e.getBlock().getLocation().add(0.5, 0, 0.5);
                 loc.getWorld().spawnEntity(loc, EntityType.CAVE_SPIDER);
                 // MessageUtils.send(e.getPlayer(), "<red>🕷 ¡Una araña de cueva ha salido de la
