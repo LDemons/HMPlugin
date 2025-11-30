@@ -138,10 +138,6 @@ public class DifficultyManager {
             if (entity instanceof Phantom) {
                 applyPhantomEffects((Phantom) entity);
             }
-            // Ghasts: Convertir Happy Ghasts en Ghasts normales/hostiles
-            if (entity instanceof org.bukkit.entity.Ghast) {
-                makeGhastNormal((org.bukkit.entity.Ghast) entity);
-            }
 
             // Lógica unificada para hacer agresivos a Mobs pasivos
             // Usamos "Mob" para cubrir Animales, Murciélagos y Aldeanos
@@ -525,24 +521,6 @@ public class DifficultyManager {
             return java.util.EnumSet.of(com.destroystokyo.paper.entity.ai.GoalType.MOVE,
                     com.destroystokyo.paper.entity.ai.GoalType.LOOK);
         }
-    }
-
-    /**
-     * Convierte Happy Ghasts en Ghasts normales/hostiles.
-     * Remueve cualquier efecto de poción que pueda hacerlos pacíficos
-     * y elimina custom names que puedan identificarlos como "Happy".
-     */
-    private void makeGhastNormal(org.bukkit.entity.Ghast ghast) {
-        // Remover todos los efectos de poción (Happy Ghasts pueden tener efectos
-        // especiales)
-        ghast.getActivePotionEffects().forEach(effect -> ghast.removePotionEffect(effect.getType()));
-
-        // Remover custom name si tiene (Happy Ghasts suelen tener nombres)
-        ghast.setCustomName(null);
-        ghast.setCustomNameVisible(false);
-
-        // Asegurar que el Ghast sea hostil (no AI)
-        // Los Ghasts son naturalmente hostiles, solo necesitamos limpiar modificaciones
     }
 
     private void makePigmanAngry(PigZombie pigman) {
