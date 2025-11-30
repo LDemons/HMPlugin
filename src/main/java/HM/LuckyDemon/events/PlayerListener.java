@@ -111,11 +111,7 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        // Debug: Log TODOS los mobs que spawnean
-        org.bukkit.Bukkit.getLogger().info("[DEBUG] Mob spawneado: " + e.getEntityType() +
-                " | Razón: " + e.getSpawnReason() +
-                " | Día: " + HMPlugin.getInstance().getDifficultyManager().getCurrentDay() +
-                " | Es Animal: " + (e.getEntity() instanceof Animals));
+        // (Línea de debug borrada)
 
         // Delay de 1 tick para asegurar que el mob esté completamente cargado
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
