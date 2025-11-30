@@ -17,8 +17,10 @@ public class HMPlugin extends JavaPlugin {
         saveDefaultConfig();
 
         // Mensaje de inicio en consola usando el nuevo sistema
-        MessageUtils.send(this.getServer().getConsoleSender(), "<gradient:red:dark_red>Permadeath Reborn (HMPluggin) activado correctamente.</gradient>");
-        MessageUtils.send(this.getServer().getConsoleSender(), "<gray>Versión corriendo en: <yellow>" + getServer().getVersion());
+        MessageUtils.send(this.getServer().getConsoleSender(),
+                "<gradient:red:dark_red>Permadeath Reborn (HMPluggin) activado correctamente.</gradient>");
+        MessageUtils.send(this.getServer().getConsoleSender(),
+                "<gray>Versión corriendo en: <yellow>" + getServer().getVersion());
 
         // Registrar comando
         getCommand("hm").setExecutor(new HM.LuckyDemon.commands.MainCommand());
@@ -30,20 +32,30 @@ public class HMPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.PlayerListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.EntityListener(this), this);
 
+        // Registrar mecánicas día 20+
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day20MechanicsListener(), this);
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.LootModifierListener(), this);
+
         // Tarea de Tormenta
-        // Se ejecuta cada 20 ticks (1 segundo) para actualizar el contador
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
 
         difficultyManager = new DifficultyManager(this);
 
+        // Activar KeepInventory si el día actual es >= 20
+        int currentDay = HM.LuckyDemon.managers.GameManager.getInstance().getDay();
+        if (currentDay >= 20) {
+            for (org.bukkit.World world : org.bukkit.Bukkit.getWorlds()) {
+                world.setGameRule(org.bukkit.GameRule.KEEP_INVENTORY, true);
+            }
+            MessageUtils.send(this.getServer().getConsoleSender(),
+                    "<green>KeepInventory activado (Día " + currentDay + " >= 20)");
+        }
     }
 
     @Override
     public void onDisable() {
         MessageUtils.send(this.getServer().getConsoleSender(), "<red>Permadeath desactivado.");
     }
-
-    // Metodo estático para obtener la instancia del plugin desde cualquier lado
 
     public static HMPlugin getInstance() {
         return instance;

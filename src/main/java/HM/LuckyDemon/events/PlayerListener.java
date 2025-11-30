@@ -17,6 +17,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.block.Skull;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Animals;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -110,6 +111,13 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent e) {
+        // Debug: Log cuando spawnea un animal
+        if (e.getEntity() instanceof Animals || e.getEntity() instanceof org.bukkit.entity.Bat) {
+            org.bukkit.Bukkit.getLogger().info("[DEBUG] Mob spawneado: " + e.getEntityType() +
+                    " | Razón: " + e.getSpawnReason() +
+                    " | Día: " + HMPlugin.getInstance().getDifficultyManager().getCurrentDay());
+        }
+
         // Delegar al DifficultyManager para aplicar efectos según el tipo de mob
         HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
     }

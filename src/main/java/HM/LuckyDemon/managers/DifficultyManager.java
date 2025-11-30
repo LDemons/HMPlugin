@@ -94,8 +94,17 @@ public class DifficultyManager {
             if (entity instanceof Phantom) {
                 applyPhantomEffects((Phantom) entity);
             }
-            if (entity instanceof Animals && !(entity instanceof Tameable)) {
+            // Ghasts: Convertir Happy Ghasts en Ghasts normales/hostiles
+            if (entity instanceof org.bukkit.entity.Ghast) {
+                makeGhastNormal((org.bukkit.entity.Ghast) entity);
+            }
+            // TODOS los animales pasivos son agresivos (sin excluir Tameables)
+            if (entity instanceof Animals) {
                 makeAnimalAggressive((Animals) entity);
+            }
+            // Bats también son agresivos (no son Animals, son Ambient)
+            if (entity instanceof org.bukkit.entity.Bat) {
+                makeBatAggressive((org.bukkit.entity.Bat) entity);
             }
             if (entity instanceof PigZombie) {
                 makePigmanAngry((PigZombie) entity);
@@ -304,9 +313,321 @@ public class DifficultyManager {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void makeAnimalAggressive(Animals animal) {
-        animal.setCustomName("§cAnimal Agresivo");
-        animal.setCustomNameVisible(false);
+        // Intentar establecer atributo de daño si existe
+        try {
+            org.bukkit.attribute.AttributeInstance damageAttr = animal
+                    .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
+            if (damageAttr != null) {
+                damageAttr.setBaseValue(2.0); // 1 Corazón de daño base
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        // Inyectar IA de ataque usando Paper API
+        org.bukkit.Bukkit.getMobGoals().addGoal(animal, 1, new AggressiveAnimalGoal(animal, plugin));
+    }
+
+    @SuppressWarnings("deprecation")
+    private void makeBatAggressive(org.bukkit.entity.Bat bat) {
+        // Los Bats no tienen atributo de daño por defecto, pero sí pueden atacar
+        // La IA se encargará de aplicar el daño
+
+        // Inyectar IA de ataque usando Paper API
+        org.bukkit.Bukkit.getMobGoals().addGoal(bat, 1, new AggressiveBatGoal(bat, plugin));
+    }
+
+    // Clase interna para la IA de ataque
+    private static class AggressiveAnimalGoal implements com.destroystokyo.paper.entity.ai.Goal<Animals> {
+        private final Animals entity;
+        private final com.destroystokyo.paper.entity.ai.GoalKey<Animals> key;
+        private int attackCooldown = 0;
+
+        public AggressiveAnimalGoal(Animals entity, HM.LuckyDemon.HMPlugin plugin) {
+            this.entity = entity;
+            this.key = com.destroystokyo.paper.entity.ai.GoalKey.of(Animals.class,
+                    new org.bukkit.NamespacedKey(plugin, "aggressive_animal"));
+        }
+
+        @Override
+        public boolean shouldActivate() {
+            org.bukkit.entity.LivingEntity target = entity.getTarget();
+
+            // Si tiene target, verificar si sigue siendo válido
+            if (target != null && !target.isDead()) {
+                if (target instanceof org.bukkit.entity.Player) {
+                    org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
+                    if (p.getGameMode() == org.bukkit.GameMode.SURVIVAL
+                            || p.getGameMode() == org.bukkit.GameMode.ADVENTURE) {
+                        return true;
+                    }
+                }
+            }
+
+            // Si no tiene target válido, buscar uno nuevo cercano (5 bloques)
+            org.bukkit.entity.Player nearestPlayer = null;
+            double nearestDistance = Double.MAX_VALUE;
+            for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                if (player.getGameMode() != org.bukkit.GameMode.SURVIVAL
+                        && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
+                    continue;
+
+                if (player.getWorld() != entity.getWorld())
+                    continue;
+
+                double distance = player.getLocation().distance(entity.getLocation());
+                if (distance < nearestDistance && distance < 5.0) { // Rango de visión 5 bloques
+                    nearestDistance = distance;
+                    nearestPlayer = player;
+                }
+            }
+
+            if (nearestPlayer != null) {
+                entity.setTarget(nearestPlayer);
+                return true;
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean shouldStayActive() {
+            org.bukkit.entity.LivingEntity target = entity.getTarget();
+
+            // Si no tiene target, desactivar
+            if (target == null || target.isDead()) {
+                return false;
+            }
+
+            // Si el target está muy lejos (más de 8 bloques), dejar de perseguir
+            double distance = entity.getLocation().distance(target.getLocation());
+            if (distance > 8.0) {
+                return false;
+            }
+
+            // Si el target cambió de gamemode, desactivar
+            if (target instanceof org.bukkit.entity.Player) {
+                org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
+                if (p.getGameMode() != org.bukkit.GameMode.SURVIVAL
+                        && p.getGameMode() != org.bukkit.GameMode.ADVENTURE) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        @Override
+        public void start() {
+            attackCooldown = 0;
+        }
+
+        @Override
+        public void stop() {
+            entity.getPathfinder().stopPathfinding();
+            entity.setTarget(null); // Olvidar target inválido
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public void tick() {
+            if (attackCooldown > 0) {
+                attackCooldown--;
+            }
+
+            org.bukkit.entity.LivingEntity target = entity.getTarget();
+            if (target == null)
+                return;
+
+            entity.lookAt(target);
+
+            double distSq = entity.getLocation().distanceSquared(target.getLocation());
+
+            // Moverse hacia el objetivo si está a más de 1 bloque (distSq > 1.0)
+            if (distSq > 1.0) {
+                entity.getPathfinder().moveTo(target);
+            }
+
+            // Atacar si está cerca (Reducido a 3.0 = ~1.7 bloques para asegurar hit
+            // cercano)
+            // Y si el cooldown lo permite
+            if (distSq < 3.0 && attackCooldown == 0) {
+                // Usar damage() en lugar de attack() para evitar glitches
+                double damage = 2.0; // 1 Corazón fijo
+                try {
+                    org.bukkit.attribute.AttributeInstance attr = entity
+                            .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
+                    if (attr != null) {
+                        damage = attr.getValue();
+                    }
+                } catch (Exception ignored) {
+                }
+
+                target.damage(damage, entity);
+                entity.swingMainHand();
+
+                // Cooldown de 1 segundo (20 ticks)
+                attackCooldown = 20;
+            }
+        }
+
+        @Override
+        public com.destroystokyo.paper.entity.ai.GoalKey<Animals> getKey() {
+            return key;
+        }
+
+        @Override
+        public java.util.EnumSet<com.destroystokyo.paper.entity.ai.GoalType> getTypes() {
+            return java.util.EnumSet.of(com.destroystokyo.paper.entity.ai.GoalType.MOVE,
+                    com.destroystokyo.paper.entity.ai.GoalType.LOOK);
+        }
+    }
+
+    // Clase interna para la IA de Bats agresivos
+    private static class AggressiveBatGoal implements com.destroystokyo.paper.entity.ai.Goal<org.bukkit.entity.Bat> {
+        private final org.bukkit.entity.Bat entity;
+        private final com.destroystokyo.paper.entity.ai.GoalKey<org.bukkit.entity.Bat> key;
+        private int attackCooldown = 0;
+
+        public AggressiveBatGoal(org.bukkit.entity.Bat entity, HM.LuckyDemon.HMPlugin plugin) {
+            this.entity = entity;
+            this.key = com.destroystokyo.paper.entity.ai.GoalKey.of(org.bukkit.entity.Bat.class,
+                    new org.bukkit.NamespacedKey(plugin, "aggressive_bat"));
+        }
+
+        @Override
+        public boolean shouldActivate() {
+            org.bukkit.entity.LivingEntity target = entity.getTarget();
+
+            if (target != null && !target.isDead()) {
+                if (target instanceof org.bukkit.entity.Player) {
+                    org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
+                    if (p.getGameMode() == org.bukkit.GameMode.SURVIVAL
+                            || p.getGameMode() == org.bukkit.GameMode.ADVENTURE) {
+                        return true;
+                    }
+                }
+            }
+
+            // Buscar jugador cercano (5 bloques)
+            org.bukkit.entity.Player nearestPlayer = null;
+            double nearestDistance = Double.MAX_VALUE;
+            for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                if (player.getGameMode() != org.bukkit.GameMode.SURVIVAL
+                        && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
+                    continue;
+
+                if (player.getWorld() != entity.getWorld())
+                    continue;
+
+                double distance = player.getLocation().distance(entity.getLocation());
+                if (distance < nearestDistance && distance < 5.0) {
+                    nearestDistance = distance;
+                    nearestPlayer = player;
+                }
+            }
+
+            if (nearestPlayer != null) {
+                entity.setTarget(nearestPlayer);
+                return true;
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean shouldStayActive() {
+            org.bukkit.entity.LivingEntity target = entity.getTarget();
+
+            if (target == null || target.isDead()) {
+                return false;
+            }
+
+            // Dejar de perseguir si está muy lejos (8 bloques)
+            double distance = entity.getLocation().distance(target.getLocation());
+            if (distance > 8.0) {
+                return false;
+            }
+
+            if (target instanceof org.bukkit.entity.Player) {
+                org.bukkit.entity.Player p = (org.bukkit.entity.Player) target;
+                if (p.getGameMode() != org.bukkit.GameMode.SURVIVAL
+                        && p.getGameMode() != org.bukkit.GameMode.ADVENTURE) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        @Override
+        public void start() {
+            attackCooldown = 0;
+        }
+
+        @Override
+        public void stop() {
+            entity.getPathfinder().stopPathfinding();
+            entity.setTarget(null);
+        }
+
+        @Override
+        public void tick() {
+            if (attackCooldown > 0) {
+                attackCooldown--;
+            }
+
+            org.bukkit.entity.LivingEntity target = entity.getTarget();
+            if (target == null)
+                return;
+
+            entity.lookAt(target);
+
+            double distSq = entity.getLocation().distanceSquared(target.getLocation());
+
+            if (distSq > 1.0) {
+                entity.getPathfinder().moveTo(target);
+            }
+
+            // Atacar si está cerca (3.0 = ~1.7 bloques)
+            if (distSq < 3.0 && attackCooldown == 0) {
+                // Bats hacen 1 corazón de daño
+                target.damage(2.0, entity);
+
+                // Cooldown de 1 segundo (20 ticks)
+                attackCooldown = 20;
+            }
+        }
+
+        @Override
+        public com.destroystokyo.paper.entity.ai.GoalKey<org.bukkit.entity.Bat> getKey() {
+            return key;
+        }
+
+        @Override
+        public java.util.EnumSet<com.destroystokyo.paper.entity.ai.GoalType> getTypes() {
+            return java.util.EnumSet.of(com.destroystokyo.paper.entity.ai.GoalType.MOVE,
+                    com.destroystokyo.paper.entity.ai.GoalType.LOOK);
+        }
+    }
+
+    /**
+     * Convierte Happy Ghasts en Ghasts normales/hostiles.
+     * Remueve cualquier efecto de poción que pueda hacerlos pacíficos
+     * y elimina custom names que puedan identificarlos como "Happy".
+     */
+    private void makeGhastNormal(org.bukkit.entity.Ghast ghast) {
+        // Remover todos los efectos de poción (Happy Ghasts pueden tener efectos
+        // especiales)
+        ghast.getActivePotionEffects().forEach(effect -> ghast.removePotionEffect(effect.getType()));
+
+        // Remover custom name si tiene (Happy Ghasts suelen tener nombres)
+        ghast.setCustomName(null);
+        ghast.setCustomNameVisible(false);
+
+        // Asegurar que el Ghast sea hostil (no AI)
+        // Los Ghasts son naturalmente hostiles, solo necesitamos limpiar modificaciones
     }
 
     private void makePigmanAngry(PigZombie pigman) {
@@ -327,8 +648,7 @@ public class DifficultyManager {
     }
 
     private void setupRavagerLoot(Ravager ravager) {
-        ravager.setCustomName("§6Ravager Especial");
-        ravager.setCustomNameVisible(false);
+        // Ravager especial sin nametag (1% chance de dropear Tótem)
     }
 
     // ========== REGLAS SEGÚN DÍA ==========
