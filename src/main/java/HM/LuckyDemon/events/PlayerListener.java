@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Animals;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import HM.LuckyDemon.managers.ScoreboardManager;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -54,6 +55,14 @@ public class PlayerListener implements Listener {
         e.quitMessage(MessageUtils.format("<gray>[<red>-<gray>] <yellow>" + e.getPlayer().getName()));
         // Limpiar el registro cuando el jugador sale
         pvpMessageShown.remove(e.getPlayer().getUniqueId());
+    }
+
+    // Aplicar scoreboard de vida
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent e) {
+        Player player = e.getPlayer();
+
+        ScoreboardManager.getInstance().applyScoreboard(player);
     }
 
     @EventHandler
@@ -115,22 +124,20 @@ public class PlayerListener implements Listener {
         if (HM.LuckyDemon.managers.GameManager.getInstance().getDay() >= 25) {
             if (e.getEntity() instanceof org.bukkit.entity.Slime) {
                 org.bukkit.entity.Slime slime = (org.bukkit.entity.Slime) e.getEntity();
-                
+
                 // Si el spawn es por SLIME_SPLIT, marcarlo inmediatamente
                 if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) {
                     // Marcar según el tipo
                     if (slime instanceof org.bukkit.entity.MagmaCube) {
                         slime.getPersistentDataContainer().set(
-                            new NamespacedKey(HMPlugin.getInstance(), "magma_division"),
-                            PersistentDataType.BYTE,
-                            (byte) 1
-                        );
+                                new NamespacedKey(HMPlugin.getInstance(), "magma_division"),
+                                PersistentDataType.BYTE,
+                                (byte) 1);
                     } else {
                         slime.getPersistentDataContainer().set(
-                            new NamespacedKey(HMPlugin.getInstance(), "slime_division"),
-                            PersistentDataType.BYTE,
-                            (byte) 1
-                        );
+                                new NamespacedKey(HMPlugin.getInstance(), "slime_division"),
+                                PersistentDataType.BYTE,
+                                (byte) 1);
                     }
                 }
             }
@@ -159,8 +166,9 @@ public class PlayerListener implements Listener {
             // Verificar si tiene chance de drop configurado (Día 25+)
             org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "totem_drop_chance");
             if (ravager.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.INTEGER)) {
-                int chance = ravager.getPersistentDataContainer().get(key, org.bukkit.persistence.PersistentDataType.INTEGER);
-                
+                int chance = ravager.getPersistentDataContainer().get(key,
+                        org.bukkit.persistence.PersistentDataType.INTEGER);
+
                 if (new java.util.Random().nextInt(100) < chance) {
                     e.getDrops().add(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TOTEM_OF_UNDYING));
                 }
@@ -255,11 +263,14 @@ public class PlayerListener implements Listener {
         if (world.hasStorm()) {
             int currentDuration = world.getWeatherDuration();
             world.setWeatherDuration(currentDuration + addedTicks);
+            world.setThunderDuration(currentDuration + addedTicks); // Extender también los rayos
             Bukkit.broadcast(MessageUtils.format("<blue>⛈ ¡La tormenta se ha extendido <bold>"
                     + MessageUtils.formatTime(addedSeconds) + "<reset><blue> más!"));
         } else {
             world.setStorm(true);
+            world.setThundering(true); // ← ACTIVAR RAYOS
             world.setWeatherDuration(addedTicks);
+            world.setThunderDuration(addedTicks); // ← DURACIÓN DE LOS RAYOS
             Bukkit.broadcast(MessageUtils.format("<dark_aqua>⛈ ¡Ha comenzado una tormenta de <bold>"
                     + MessageUtils.formatTime(addedSeconds) + "<reset><dark_aqua>!"));
         }

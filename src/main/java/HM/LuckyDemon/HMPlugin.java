@@ -1,7 +1,10 @@
 package HM.LuckyDemon;
 
+import HM.LuckyDemon.events.BastionLootListener;
 import HM.LuckyDemon.managers.DifficultyManager;
 import HM.LuckyDemon.utils.MessageUtils;
+import HM.LuckyDemon.events.AncientDebrisListener;
+import HM.LuckyDemon.managers.ScoreboardManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class HMPlugin extends JavaPlugin {
@@ -25,6 +28,9 @@ public class HMPlugin extends JavaPlugin {
         // Registrar comando
         getCommand("hm").setExecutor(new HM.LuckyDemon.commands.MainCommand());
 
+        // Inicializar scoreboard de vida
+        ScoreboardManager.getInstance().initialize();
+
         // Registrar Recetas
         HM.LuckyDemon.recipes.RecipeManager.registerRecipes();
 
@@ -35,7 +41,11 @@ public class HMPlugin extends JavaPlugin {
         // Registrar mecánicas día 20+
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day20MechanicsListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.LootModifierListener(), this);
-        
+
+        // Netherite baneada
+        getServer().getPluginManager().registerEvents(new BastionLootListener(), this);
+        getServer().getPluginManager().registerEvents(new AncientDebrisListener(), this);
+
         // Registrar mecánicas día 25+ (Ghast demoníaco)
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.GhastFireballListener(), this);
 
@@ -58,6 +68,9 @@ public class HMPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         MessageUtils.send(this.getServer().getConsoleSender(), "<red>Permadeath desactivado.");
+
+        // Desactivar scoreboard
+        ScoreboardManager.getInstance().disable();
     }
 
     public static HMPlugin getInstance() {

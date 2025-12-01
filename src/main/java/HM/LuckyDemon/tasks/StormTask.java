@@ -25,12 +25,14 @@ public class StormTask extends BukkitRunnable {
             int secondsLeft = world.getWeatherDuration() / 20;
 
             // Si la tormenta está a punto de acabar, no mostramos nada
-            if (secondsLeft <= 0) return;
+            if (secondsLeft <= 0)
+                return;
 
             // >>> CAMBIO: Obtenemos también el DÍA actual <<<
             int currentDay = GameManager.getInstance().getDay();
-            
-            // Aplicar efectos a mobs durante Death Train si es día 25+
+
+            // DÍA 25+: Durante Death Train, todos los mobs tienen Fuerza I, Velocidad I y
+            // Resistencia I
             if (HMPlugin.getInstance().getDifficultyManager().isDay25OrLater()) {
                 applyDeathTrainEffects(world);
             }
@@ -39,8 +41,8 @@ public class StormTask extends BukkitRunnable {
             // Así el jugador ve toda la info importante de un vistazo
             Component actionBar = MessageUtils.format(
                     "<gradient:red:gold><bold>PERMADEATH</gradient> <gray>» <yellow>Día " + currentDay +
-                            " <gray>| <gradient:aqua:blue>⛈ DEATH TRAIN: <white>" + MessageUtils.formatTime(secondsLeft)
-            );
+                            " <gray>| <gradient:aqua:blue>⛈ DEATH TRAIN: <white>"
+                            + MessageUtils.formatTime(secondsLeft));
 
             // Se lo enviamos a todos
             for (Player player : Bukkit.getOnlinePlayers()) {
@@ -49,34 +51,44 @@ public class StormTask extends BukkitRunnable {
         }
     }
 
+    /**
+     * DÍA 25+: Durante Death Train, aplicar Fuerza I, Velocidad I y Resistencia I a
+     * todos los mobs
+     */
     private void applyDeathTrainEffects(World world) {
-        // Aplicar Fuerza I, Velocidad I y Resistencia I a todos los mobs hostiles
+        // Aplicar efectos a todos los mobs hostiles durante la tormenta
         for (LivingEntity entity : world.getLivingEntities()) {
             if (entity instanceof Mob && !(entity instanceof Player)) {
                 Mob mob = (Mob) entity;
-                
-                // Solo aplicar si es un mob hostil (tiene objetivo de ataque)
-                if (mob.getTarget() != null || isHostileMob(mob)) {
-                    // Verificar si ya tiene los efectos para no aplicarlos cada tick
-                    if (!mob.hasPotionEffect(PotionEffectType.STRENGTH)) {
-                        mob.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 100, 0, false, false));
-                    }
-                    if (!mob.hasPotionEffect(PotionEffectType.SPEED)) {
-                        mob.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 0, false, false));
-                    }
-                    if (!mob.hasPotionEffect(PotionEffectType.RESISTANCE)) {
-                        mob.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 100, 0, false, false));
-                    }
+
+                // Solo aplicar a mobs hostiles
+                if (isHostileMob(mob)) {
+                    // Aplicar efectos solo si no los tiene o están por expirar (< 40 ticks)
+                    applyEffectIfNeeded(mob, PotionEffectType.STRENGTH, 0);
+                    applyEffectIfNeeded(mob, PotionEffectType.SPEED, 0);
+                    applyEffectIfNeeded(mob, PotionEffectType.RESISTANCE, 0);
                 }
             }
+        }
+    }
+
+    /**
+     * Aplica un efecto de poción solo si el mob no lo tiene o está por expirar
+     */
+    private void applyEffectIfNeeded(Mob mob, PotionEffectType type, int amplifier) {
+        PotionEffect currentEffect = mob.getPotionEffect(type);
+
+        // Si no tiene el efecto o le quedan menos de 40 ticks (2 segundos), renovarlo
+        if (currentEffect == null || currentEffect.getDuration() < 40) {
+            mob.addPotionEffect(new PotionEffect(type, 100, amplifier, false, false));
         }
     }
 
     private boolean isHostileMob(Mob mob) {
         // Lista de mobs hostiles comunes
         return mob instanceof org.bukkit.entity.Monster ||
-               mob instanceof org.bukkit.entity.Slime ||
-               mob instanceof org.bukkit.entity.Ghast ||
-               mob instanceof org.bukkit.entity.Phantom;
+                mob instanceof org.bukkit.entity.Slime ||
+                mob instanceof org.bukkit.entity.Ghast ||
+                mob instanceof org.bukkit.entity.Phantom;
     }
 }

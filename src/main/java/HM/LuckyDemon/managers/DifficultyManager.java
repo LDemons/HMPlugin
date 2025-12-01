@@ -200,19 +200,19 @@ public class DifficultyManager {
         // DÍA 25: Giga Slimes (solo si es spawn natural, no división)
         if (entity instanceof Slime && !(entity instanceof MagmaCube)) {
             Slime slime = (Slime) entity;
-            
+
             // 1. Verificar si ya fue marcado como "división" (SKIP)
             org.bukkit.NamespacedKey divisionKey = new org.bukkit.NamespacedKey(plugin, "slime_division");
             if (slime.getPersistentDataContainer().has(divisionKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
                 return; // Es una división, NO aplicar efectos gigantes
             }
-            
+
             // 2. Verificar si ya fue marcado como "giga" (evitar doble aplicación)
             org.bukkit.NamespacedKey gigaKey = new org.bukkit.NamespacedKey(plugin, "giga_slime");
             if (slime.getPersistentDataContainer().has(gigaKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
                 return; // Ya fue procesado
             }
-            
+
             // 3. Solo aplicar si es spawn natural (tamaño pequeño)
             if (slime.getSize() <= 4) {
                 applyGigaSlimeEffects(slime);
@@ -222,19 +222,20 @@ public class DifficultyManager {
         // DÍA 25: Giga Magma Cubes (solo si es spawn natural, no división)
         if (entity instanceof MagmaCube) {
             MagmaCube magmaCube = (MagmaCube) entity;
-            
+
             // 1. Verificar si ya fue marcado como "división" (SKIP)
             org.bukkit.NamespacedKey divisionKey = new org.bukkit.NamespacedKey(plugin, "magma_division");
-            if (magmaCube.getPersistentDataContainer().has(divisionKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+            if (magmaCube.getPersistentDataContainer().has(divisionKey,
+                    org.bukkit.persistence.PersistentDataType.BYTE)) {
                 return; // Es una división, NO aplicar efectos gigantes
             }
-            
+
             // 2. Verificar si ya fue marcado como "giga" (evitar doble aplicación)
             org.bukkit.NamespacedKey gigaKey = new org.bukkit.NamespacedKey(plugin, "giga_magma");
             if (magmaCube.getPersistentDataContainer().has(gigaKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
                 return; // Ya fue procesado
             }
-            
+
             // 3. Solo aplicar si es spawn natural (tamaño pequeño)
             if (magmaCube.getSize() <= 4) {
                 applyGigaMagmaCubeEffects(magmaCube);
@@ -646,7 +647,7 @@ public class DifficultyManager {
         // 5 efectos aleatorios (en lugar de 3)
         int effectCount = 5;
         List<PotionEffectType> availableEffects = getAvailableEffects();
-        
+
         for (int i = 0; i < effectCount && !availableEffects.isEmpty(); i++) {
             int index = random.nextInt(availableEffects.size());
             PotionEffectType effectType = availableEffects.remove(index);
@@ -654,7 +655,7 @@ public class DifficultyManager {
             int amplifier = getAmplifierForEffect(effectType);
             spider.addPotionEffect(new PotionEffect(effectType, duration, amplifier));
         }
-        
+
         spawnSkeletonRider(spider);
     }
 
@@ -665,31 +666,30 @@ public class DifficultyManager {
 
         // Marcar con 1% de drop de tótem
         ravager.getPersistentDataContainer().set(
-            new org.bukkit.NamespacedKey(plugin, "totem_drop_chance"),
-            org.bukkit.persistence.PersistentDataType.INTEGER,
-            1
-        );
+                new org.bukkit.NamespacedKey(plugin, "totem_drop_chance"),
+                org.bukkit.persistence.PersistentDataType.INTEGER,
+                1);
     }
 
     private void applyGigaSlimeEffects(Slime slime) {
         // Marcar como Giga Slime original
         slime.getPersistentDataContainer().set(
-            new org.bukkit.NamespacedKey(plugin, "giga_slime"),
-            org.bukkit.persistence.PersistentDataType.BYTE,
-            (byte) 1
-        );
+                new org.bukkit.NamespacedKey(plugin, "giga_slime"),
+                org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
 
         // Nombre personalizado
         slime.customName(net.kyori.adventure.text.Component.text("Giga Slime")
-            .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
-            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
         slime.setCustomNameVisible(true);
 
         // Tamaño 15
         slime.setSize(15);
-        
+
         // Doble de vida
-        org.bukkit.attribute.AttributeInstance maxHealth = slime.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+        org.bukkit.attribute.AttributeInstance maxHealth = slime
+                .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
         if (maxHealth != null) {
             double currentMax = maxHealth.getBaseValue();
             maxHealth.setBaseValue(currentMax * 2);
@@ -700,15 +700,14 @@ public class DifficultyManager {
     private void applyGigaMagmaCubeEffects(MagmaCube magmaCube) {
         // Marcar como Giga Magma Cube original
         magmaCube.getPersistentDataContainer().set(
-            new org.bukkit.NamespacedKey(plugin, "giga_magma"),
-            org.bukkit.persistence.PersistentDataType.BYTE,
-            (byte) 1
-        );
+                new org.bukkit.NamespacedKey(plugin, "giga_magma"),
+                org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
 
         // Nombre personalizado
         magmaCube.customName(net.kyori.adventure.text.Component.text("Giga Magma Cube")
-            .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
-            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
         magmaCube.setCustomNameVisible(true);
 
         // Tamaño 16
@@ -718,7 +717,8 @@ public class DifficultyManager {
     private void applyDemonicGhastEffects(Ghast ghast) {
         // Vida entre 40 y 60
         int health = 40 + random.nextInt(21); // 40-60
-        org.bukkit.attribute.AttributeInstance maxHealth = ghast.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+        org.bukkit.attribute.AttributeInstance maxHealth = ghast
+                .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
         if (maxHealth != null) {
             maxHealth.setBaseValue(health);
             ghast.setHealth(health);
@@ -726,16 +726,15 @@ public class DifficultyManager {
 
         // Nombre personalizado
         ghast.customName(net.kyori.adventure.text.Component.text("Ghast Demoníaco")
-            .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
-            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
         ghast.setCustomNameVisible(true);
 
         // Marcar que es un Ghast Demoníaco para las bolas de fuego
         ghast.getPersistentDataContainer().set(
-            new org.bukkit.NamespacedKey(plugin, "demonic_ghast"),
-            org.bukkit.persistence.PersistentDataType.BYTE,
-            (byte) 1
-        );
+                new org.bukkit.NamespacedKey(plugin, "demonic_ghast"),
+                org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
     }
 
     // ========== REGLAS SEGÚN DÍA ==========
@@ -787,13 +786,16 @@ public class DifficultyManager {
 
     /**
      * Calcula las horas de Death Train según el sistema de reset cada 25 días
+     * Día 25 = 1hr, Día 26 = 2hr, ..., Día 49 = 24hr, Día 50 = 1hr, etc.
      */
     public int getStormHoursForCurrentDay() {
-        // Reset cada 25 días
-        int effectiveDay = currentDay % 25;
-        if (effectiveDay == 0 && currentDay > 0) {
-            effectiveDay = 25;
+        // Si es día 0, no hay tormenta
+        if (currentDay == 0) {
+            return 0;
         }
+
+        // Reset cada 25 días: día 1-24 = 1-24hr, día 25 = 1hr, día 26 = 2hr, etc.
+        int effectiveDay = ((currentDay - 1) % 25) + 1;
         return effectiveDay;
     }
 }
