@@ -125,19 +125,40 @@ public class PlayerListener implements Listener {
             if (e.getEntity() instanceof org.bukkit.entity.Slime) {
                 org.bukkit.entity.Slime slime = (org.bukkit.entity.Slime) e.getEntity();
 
-                // Si el spawn es por SLIME_SPLIT, marcarlo inmediatamente
+                // Si el spawn es por SLIME_SPLIT, heredar marcadores del padre
                 if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) {
-                    // Marcar según el tipo
-                    if (slime instanceof org.bukkit.entity.MagmaCube) {
-                        slime.getPersistentDataContainer().set(
-                                new NamespacedKey(HMPlugin.getInstance(), "magma_division"),
-                                PersistentDataType.BYTE,
-                                (byte) 1);
-                    } else {
-                        slime.getPersistentDataContainer().set(
-                                new NamespacedKey(HMPlugin.getInstance(), "slime_division"),
-                                PersistentDataType.BYTE,
-                                (byte) 1);
+                    // Buscar el slime padre más cercano
+                    org.bukkit.entity.Slime parent = findParentSlime(slime);
+
+                    if (parent != null) {
+                        // Heredar marcadores del padre
+                        if (slime instanceof org.bukkit.entity.MagmaCube) {
+                            // Verificar si el padre era un Giga Magma
+                            NamespacedKey gigaKey = new NamespacedKey(HMPlugin.getInstance(), "giga_magma");
+                            if (parent.getPersistentDataContainer().has(gigaKey, PersistentDataType.BYTE)) {
+                                // Heredar el marcador de giga
+                                slime.getPersistentDataContainer().set(gigaKey, PersistentDataType.BYTE, (byte) 1);
+                            }
+
+                            // Marcar como división
+                            slime.getPersistentDataContainer().set(
+                                    new NamespacedKey(HMPlugin.getInstance(), "magma_division"),
+                                    PersistentDataType.BYTE,
+                                    (byte) 1);
+                        } else {
+                            // Verificar si el padre era un Giga Slime
+                            NamespacedKey gigaKey = new NamespacedKey(HMPlugin.getInstance(), "giga_slime");
+                            if (parent.getPersistentDataContainer().has(gigaKey, PersistentDataType.BYTE)) {
+                                // Heredar el marcador de giga
+                                slime.getPersistentDataContainer().set(gigaKey, PersistentDataType.BYTE, (byte) 1);
+                            }
+
+                            // Marcar como división
+                            slime.getPersistentDataContainer().set(
+                                    new NamespacedKey(HMPlugin.getInstance(), "slime_division"),
+                                    PersistentDataType.BYTE,
+                                    (byte) 1);
+                        }
                     }
                 }
             }
@@ -149,6 +170,25 @@ public class PlayerListener implements Listener {
                 HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
             }
         }, 1L);
+    }
+
+    /**
+     * Encontrar el slime padre más cercano (para heredar marcadores)
+     */
+    private org.bukkit.entity.Slime findParentSlime(org.bukkit.entity.Slime child) {
+        // Buscar slimes cercanos (radio de 5 bloques)
+        for (org.bukkit.entity.Entity nearby : child.getNearbyEntities(5, 5, 5)) {
+            if (nearby instanceof org.bukkit.entity.Slime) {
+                org.bukkit.entity.Slime potentialParent = (org.bukkit.entity.Slime) nearby;
+
+                // El padre debe ser del mismo tipo y más grande
+                if (potentialParent.getClass().equals(child.getClass()) &&
+                        potentialParent.getSize() > child.getSize()) {
+                    return potentialParent;
+                }
+            }
+        }
+        return null;
     }
 
     @EventHandler
@@ -179,6 +219,11 @@ public class PlayerListener implements Listener {
                     e.getDrops().add(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TOTEM_OF_UNDYING));
                 }
             }
+        }
+
+        // DÍA 25+: Drops de armadura de Netherite especial
+        if (HMPlugin.getInstance().getDifficultyManager().isDay25OrLater()) {
+            handleDay25ArmorDrops(e);
         }
     }
 
@@ -403,5 +448,137 @@ public class PlayerListener implements Listener {
             skull.setOwningPlayer((OfflinePlayer) player);
             skull.update();
         }
+    }
+
+    /**
+     * DÍA 25+: Manejar drops de armadura de Netherite especial
+     */
+    private void handleDay25ArmorDrops(EntityDeathEvent e) {
+        java.util.Random random = new java.util.Random();
+        ItemStack armorPiece = null;
+        int dropChance = 30; // Probabilidad por defecto: 30%
+
+        // Ghast Demoníaco → Botas de Netherite (30%)
+        if (e.getEntity() instanceof org.bukkit.entity.Ghast) {
+            org.bukkit.entity.Ghast ghast = (org.bukkit.entity.Ghast) e.getEntity();
+
+            // Verificar si es un Ghast Demoníaco
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "demonic_ghast");
+            if (ghast.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                dropChance = 30;
+                if (random.nextInt(100) < dropChance) {
+                    armorPiece = createSpecialNetheriteArmor(Material.NETHERITE_BOOTS, "Botas Infernales");
+                }
+            }
+        }
+
+        // Giga Slime → Pechera de Netherite (20%, solo en tamaño 1)
+        else if (e.getEntity() instanceof org.bukkit.entity.Slime
+                && !(e.getEntity() instanceof org.bukkit.entity.MagmaCube)) {
+            org.bukkit.entity.Slime slime = (org.bukkit.entity.Slime) e.getEntity();
+
+            // Verificar si es un Giga Slime Y está en tamaño 1 (más pequeño)
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "giga_slime");
+            if (slime.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.BYTE)
+                    && slime.getSize() == 1) {
+                dropChance = 20; // 20% para Giga Slimes
+                if (random.nextInt(100) < dropChance) {
+                    armorPiece = createSpecialNetheriteArmor(Material.NETHERITE_CHESTPLATE, "Pechera Infernal");
+                }
+            }
+        }
+
+        // Giga Magma Cube → Pantalones de Netherite (20%, solo en tamaño 1)
+        else if (e.getEntity() instanceof org.bukkit.entity.MagmaCube) {
+            org.bukkit.entity.MagmaCube magmaCube = (org.bukkit.entity.MagmaCube) e.getEntity();
+
+            // Verificar si es un Giga Magma Cube Y está en tamaño 1 (más pequeño)
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "giga_magma");
+            if (magmaCube.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.BYTE)
+                    && magmaCube.getSize() == 1) {
+                dropChance = 20; // 20% para Giga Magma Cubes
+                if (random.nextInt(100) < dropChance) {
+                    armorPiece = createSpecialNetheriteArmor(Material.NETHERITE_LEGGINGS, "Pantalones Infernales");
+                }
+            }
+        }
+
+        // Araña de Cueva → Casco de Netherite (30%)
+        else if (e.getEntity() instanceof org.bukkit.entity.CaveSpider) {
+            dropChance = 30;
+            if (random.nextInt(100) < dropChance) {
+                armorPiece = createSpecialNetheriteArmor(Material.NETHERITE_HELMET, "Casco Infernal");
+            }
+        }
+
+        // Agregar el drop si se creó
+        if (armorPiece != null) {
+            e.getDrops().add(armorPiece);
+        }
+    }
+
+    /**
+     * Crear pieza de armadura de Netherite especial (irrompible)
+     */
+    private ItemStack createSpecialNetheriteArmor(Material material, String displayName) {
+        ItemStack armor = new ItemStack(material);
+        ItemMeta meta = armor.getItemMeta();
+
+        if (meta != null) {
+            // Nombre personalizado
+            meta.displayName(
+                    MessageUtils.format("<gradient:dark_purple:light_purple><bold>" + displayName + "</gradient>"));
+
+            // Hacer irrompible
+            meta.setUnbreakable(true);
+
+            // Lore explicativo
+            java.util.List<net.kyori.adventure.text.Component> lore = new java.util.ArrayList<>();
+            lore.add(MessageUtils.format("<gray>Armadura especial del Día 25+"));
+            lore.add(MessageUtils.format("<dark_purple>Irrompible"));
+            lore.add(MessageUtils.format(""));
+            lore.add(MessageUtils.format("<gold>Set completo: <yellow>+4 ❤"));
+            meta.lore(lore);
+
+            // Marcar como armadura especial
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "infernal_armor");
+            meta.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+            armor.setItemMeta(meta);
+        }
+
+        return armor;
+    }
+
+    /**
+     * Verificar si el jugador tiene el set completo de armadura infernal
+     */
+    private boolean hasFullInfernalSet(Player player) {
+        org.bukkit.inventory.EntityEquipment equipment = player.getEquipment();
+        if (equipment == null)
+            return false;
+
+        ItemStack helmet = equipment.getHelmet();
+        ItemStack chestplate = equipment.getChestplate();
+        ItemStack leggings = equipment.getLeggings();
+        ItemStack boots = equipment.getBoots();
+
+        return isInfernalArmor(helmet) &&
+                isInfernalArmor(chestplate) &&
+                isInfernalArmor(leggings) &&
+                isInfernalArmor(boots);
+    }
+
+    /**
+     * Verificar si un item es armadura infernal
+     */
+    private boolean isInfernalArmor(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+
+        ItemMeta meta = item.getItemMeta();
+        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "infernal_armor");
+
+        return meta.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.BYTE);
     }
 }

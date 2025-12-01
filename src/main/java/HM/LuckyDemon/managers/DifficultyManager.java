@@ -656,7 +656,10 @@ public class DifficultyManager {
             spider.addPotionEffect(new PotionEffect(effectType, duration, amplifier));
         }
 
-        spawnSkeletonRider(spider);
+        // Solo spawnear skeleton si NO es una araña de cueva
+        if (!(spider instanceof org.bukkit.entity.CaveSpider)) {
+            spawnSkeletonRider(spider);
+        }
     }
 
     private void applyDay25RavagerEffects(Ravager ravager) {

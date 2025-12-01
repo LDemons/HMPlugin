@@ -5,6 +5,7 @@ import HM.LuckyDemon.managers.DifficultyManager;
 import HM.LuckyDemon.utils.MessageUtils;
 import HM.LuckyDemon.events.AncientDebrisListener;
 import HM.LuckyDemon.managers.ScoreboardManager;
+import HM.LuckyDemon.events.ArmorSetListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class HMPlugin extends JavaPlugin {
@@ -48,6 +49,9 @@ public class HMPlugin extends JavaPlugin {
 
         // Registrar mecánicas día 25+ (Ghast demoníaco)
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.GhastFireballListener(), this);
+
+        // Listener para bonus de armadura infernal
+        getServer().getPluginManager().registerEvents(new ArmorSetListener(), this);
 
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);

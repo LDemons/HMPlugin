@@ -45,6 +45,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     "<yellow>/hm reducestorm <horas> <white>- Reduce la duración de la tormenta <gray>(Solo OP)");
             MessageUtils.send(player,
                     "<yellow>/hm resetdifficulty <white>- Resetea la dificultad y el día <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm resethealth <white>- Resetea tu vida a 10 corazones <gray>(Solo OP)");
             return true;
         }
 
@@ -324,6 +326,35 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("resethealth")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+
+            // Resetear vida a 20 (10 corazones)
+            org.bukkit.attribute.AttributeInstance maxHealth = player
+                    .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+            if (maxHealth != null) {
+                // Remover todos los modificadores
+                java.util.ArrayList<org.bukkit.attribute.AttributeModifier> modifiers = new java.util.ArrayList<>(
+                        maxHealth.getModifiers());
+                for (org.bukkit.attribute.AttributeModifier mod : modifiers) {
+                    maxHealth.removeModifier(mod);
+                }
+
+                // Resetear a 20 (10 corazones)
+                maxHealth.setBaseValue(20.0);
+                player.setHealth(20.0);
+
+                MessageUtils.send(player, "<green>✓ Vida reseteada a 10 corazones (20 HP)");
+                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+            } else {
+                MessageUtils.send(player, "<red>Error al resetear la vida.");
+            }
+            return true;
+        }
+
         MessageUtils.send(player, "<yellow>Comando desconocido. Usa: /hm para ver la lista de comandos.");
         return true;
     }
@@ -336,7 +367,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
-                    "addlife", "reducestorm", "resetdifficulty");
+                    "addlife", "reducestorm", "resetdifficulty", "resethealth");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
