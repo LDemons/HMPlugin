@@ -663,11 +663,11 @@ public class DifficultyManager {
         ravager.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
         ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0));
 
-        // Marcar con 20% de drop de tótem
+        // Marcar con 1% de drop de tótem
         ravager.getPersistentDataContainer().set(
             new org.bukkit.NamespacedKey(plugin, "totem_drop_chance"),
             org.bukkit.persistence.PersistentDataType.INTEGER,
-            20
+            1
         );
     }
 
@@ -678,6 +678,12 @@ public class DifficultyManager {
             org.bukkit.persistence.PersistentDataType.BYTE,
             (byte) 1
         );
+
+        // Nombre personalizado
+        slime.customName(net.kyori.adventure.text.Component.text("Giga Slime")
+            .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        slime.setCustomNameVisible(true);
 
         // Tamaño 15
         slime.setSize(15);
@@ -699,6 +705,12 @@ public class DifficultyManager {
             (byte) 1
         );
 
+        // Nombre personalizado
+        magmaCube.customName(net.kyori.adventure.text.Component.text("Giga Magma Cube")
+            .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        magmaCube.setCustomNameVisible(true);
+
         // Tamaño 16
         magmaCube.setSize(16);
     }
@@ -711,6 +723,12 @@ public class DifficultyManager {
             maxHealth.setBaseValue(health);
             ghast.setHealth(health);
         }
+
+        // Nombre personalizado
+        ghast.customName(net.kyori.adventure.text.Component.text("Ghast Demoníaco")
+            .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        ghast.setCustomNameVisible(true);
 
         // Marcar que es un Ghast Demoníaco para las bolas de fuego
         ghast.getPersistentDataContainer().set(
