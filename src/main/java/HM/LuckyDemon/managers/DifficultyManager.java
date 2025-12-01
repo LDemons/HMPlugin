@@ -130,37 +130,120 @@ public class DifficultyManager {
     // ========== EFECTOS A MOBS ==========
 
     public void applyMobEffects(LivingEntity entity) {
-        if (currentDay >= 20) {
-            if (entity instanceof Spider) {
-                applyDay20SpiderEffects((Spider) entity);
-                return;
-            }
-            if (entity instanceof Phantom) {
-                applyPhantomEffects((Phantom) entity);
-            }
-
-            // Lógica unificada para hacer agresivos a Mobs pasivos
-            // Usamos "Mob" para cubrir Animales, Murciélagos y Aldeanos
-            if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
-                    || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
-                    || entity instanceof AbstractVillager) {
-                // 2.0 de daño = 1 corazón
-                makeAggressive((Mob) entity, 2.0);
-            }
-
-            if (entity instanceof PigZombie) {
-                makePigmanAngry((PigZombie) entity);
-            }
-            if (entity instanceof Ravager) {
-                setupRavagerLoot((Ravager) entity);
-            }
+        if (currentDay >= 25) {
+            applyDay25Effects(entity);
+        } else if (currentDay >= 20) {
+            applyDay20Effects(entity);
         } else if (difficultyLevel >= 1) {
-            if (entity instanceof Spider) {
-                applySpiderEffects((Spider) entity);
+            applyBaseEffects(entity);
+        }
+    }
+
+    private void applyBaseEffects(LivingEntity entity) {
+        if (entity instanceof Spider) {
+            applySpiderEffects((Spider) entity);
+        }
+        if (entity.getType().name().equals("CREAKING")) {
+            applyCreakingEffects(entity);
+        }
+    }
+
+    private void applyDay20Effects(LivingEntity entity) {
+        if (entity instanceof Spider) {
+            applyDay20SpiderEffects((Spider) entity);
+            return;
+        }
+        if (entity instanceof Phantom) {
+            applyPhantomEffects((Phantom) entity);
+        }
+        if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
+                || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
+                || entity instanceof AbstractVillager) {
+            makeAggressive((Mob) entity, 2.0);
+        }
+        if (entity instanceof PigZombie) {
+            makePigmanAngry((PigZombie) entity);
+        }
+        if (entity instanceof Ravager) {
+            setupRavagerLoot((Ravager) entity);
+        }
+    }
+
+    private void applyDay25Effects(LivingEntity entity) {
+        // Aplicar efectos base del día 20 primero
+        if (entity instanceof Spider) {
+            applyDay25SpiderEffects((Spider) entity);
+            return;
+        }
+        if (entity instanceof Phantom) {
+            applyPhantomEffects((Phantom) entity);
+        }
+        if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
+                || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
+                || entity instanceof AbstractVillager) {
+            makeAggressive((Mob) entity, 2.0);
+        }
+        if (entity instanceof PigZombie) {
+            makePigmanAngry((PigZombie) entity);
+        }
+
+        // DÍA 25: Creaking mejorado (Fuerza II, Velocidad III)
+        if (entity.getType().name().equals("CREAKING")) {
+            applyDay25CreakingEffects(entity);
+        }
+
+        // DÍA 25: Ravagers mejorados
+        if (entity instanceof Ravager) {
+            applyDay25RavagerEffects((Ravager) entity);
+        }
+
+        // DÍA 25: Giga Slimes (solo si es spawn natural, no división)
+        if (entity instanceof Slime && !(entity instanceof MagmaCube)) {
+            Slime slime = (Slime) entity;
+            
+            // 1. Verificar si ya fue marcado como "división" (SKIP)
+            org.bukkit.NamespacedKey divisionKey = new org.bukkit.NamespacedKey(plugin, "slime_division");
+            if (slime.getPersistentDataContainer().has(divisionKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                return; // Es una división, NO aplicar efectos gigantes
             }
-            if (entity.getType().name().equals("CREAKING")) {
-                applyCreakingEffects(entity);
+            
+            // 2. Verificar si ya fue marcado como "giga" (evitar doble aplicación)
+            org.bukkit.NamespacedKey gigaKey = new org.bukkit.NamespacedKey(plugin, "giga_slime");
+            if (slime.getPersistentDataContainer().has(gigaKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                return; // Ya fue procesado
             }
+            
+            // 3. Solo aplicar si es spawn natural (tamaño pequeño)
+            if (slime.getSize() <= 4) {
+                applyGigaSlimeEffects(slime);
+            }
+        }
+
+        // DÍA 25: Giga Magma Cubes (solo si es spawn natural, no división)
+        if (entity instanceof MagmaCube) {
+            MagmaCube magmaCube = (MagmaCube) entity;
+            
+            // 1. Verificar si ya fue marcado como "división" (SKIP)
+            org.bukkit.NamespacedKey divisionKey = new org.bukkit.NamespacedKey(plugin, "magma_division");
+            if (magmaCube.getPersistentDataContainer().has(divisionKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                return; // Es una división, NO aplicar efectos gigantes
+            }
+            
+            // 2. Verificar si ya fue marcado como "giga" (evitar doble aplicación)
+            org.bukkit.NamespacedKey gigaKey = new org.bukkit.NamespacedKey(plugin, "giga_magma");
+            if (magmaCube.getPersistentDataContainer().has(gigaKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                return; // Ya fue procesado
+            }
+            
+            // 3. Solo aplicar si es spawn natural (tamaño pequeño)
+            if (magmaCube.getSize() <= 4) {
+                applyGigaMagmaCubeEffects(magmaCube);
+            }
+        }
+
+        // DÍA 25: Ghasts Demoníacos
+        if (entity instanceof Ghast) {
+            applyDemonicGhastEffects((Ghast) entity);
         }
     }
 
@@ -544,6 +627,99 @@ public class DifficultyManager {
         // Ravager especial sin nametag (1% chance de dropear Tótem)
     }
 
+    // ========== MECÁNICAS DÍA 25 ==========
+
+    /**
+     * DÍA 25: Creaking mejorado con Fuerza II y Velocidad III
+     */
+    private void applyDay25CreakingEffects(LivingEntity creaking) {
+        int duration = Integer.MAX_VALUE;
+        // Strength II (amplifier = 1) y Speed III (amplifier = 2)
+        creaking.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, duration, 1));
+        creaking.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, duration, 2));
+    }
+
+    private void applyDay25SpiderEffects(Spider spider) {
+        // Limpiar jinetes naturales
+        spider.getPassengers().forEach(Entity::remove);
+
+        // 5 efectos aleatorios (en lugar de 3)
+        int effectCount = 5;
+        List<PotionEffectType> availableEffects = getAvailableEffects();
+        
+        for (int i = 0; i < effectCount && !availableEffects.isEmpty(); i++) {
+            int index = random.nextInt(availableEffects.size());
+            PotionEffectType effectType = availableEffects.remove(index);
+            int duration = Integer.MAX_VALUE;
+            int amplifier = getAmplifierForEffect(effectType);
+            spider.addPotionEffect(new PotionEffect(effectType, duration, amplifier));
+        }
+        
+        spawnSkeletonRider(spider);
+    }
+
+    private void applyDay25RavagerEffects(Ravager ravager) {
+        // Strength II (amplifier 1) y Speed I (amplifier 0)
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0));
+
+        // Marcar con 20% de drop de tótem
+        ravager.getPersistentDataContainer().set(
+            new org.bukkit.NamespacedKey(plugin, "totem_drop_chance"),
+            org.bukkit.persistence.PersistentDataType.INTEGER,
+            20
+        );
+    }
+
+    private void applyGigaSlimeEffects(Slime slime) {
+        // Marcar como Giga Slime original
+        slime.getPersistentDataContainer().set(
+            new org.bukkit.NamespacedKey(plugin, "giga_slime"),
+            org.bukkit.persistence.PersistentDataType.BYTE,
+            (byte) 1
+        );
+
+        // Tamaño 15
+        slime.setSize(15);
+        
+        // Doble de vida
+        org.bukkit.attribute.AttributeInstance maxHealth = slime.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+        if (maxHealth != null) {
+            double currentMax = maxHealth.getBaseValue();
+            maxHealth.setBaseValue(currentMax * 2);
+            slime.setHealth(currentMax * 2);
+        }
+    }
+
+    private void applyGigaMagmaCubeEffects(MagmaCube magmaCube) {
+        // Marcar como Giga Magma Cube original
+        magmaCube.getPersistentDataContainer().set(
+            new org.bukkit.NamespacedKey(plugin, "giga_magma"),
+            org.bukkit.persistence.PersistentDataType.BYTE,
+            (byte) 1
+        );
+
+        // Tamaño 16
+        magmaCube.setSize(16);
+    }
+
+    private void applyDemonicGhastEffects(Ghast ghast) {
+        // Vida entre 40 y 60
+        int health = 40 + random.nextInt(21); // 40-60
+        org.bukkit.attribute.AttributeInstance maxHealth = ghast.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+        if (maxHealth != null) {
+            maxHealth.setBaseValue(health);
+            ghast.setHealth(health);
+        }
+
+        // Marcar que es un Ghast Demoníaco para las bolas de fuego
+        ghast.getPersistentDataContainer().set(
+            new org.bukkit.NamespacedKey(plugin, "demonic_ghast"),
+            org.bukkit.persistence.PersistentDataType.BYTE,
+            (byte) 1
+        );
+    }
+
     // ========== REGLAS SEGÚN DÍA ==========
 
     public double getMobSpawnMultiplier() {
@@ -585,5 +761,21 @@ public class DifficultyManager {
 
     public int getSpecialRulesDay() {
         return 20;
+    }
+
+    public boolean isDay25OrLater() {
+        return currentDay >= 25;
+    }
+
+    /**
+     * Calcula las horas de Death Train según el sistema de reset cada 25 días
+     */
+    public int getStormHoursForCurrentDay() {
+        // Reset cada 25 días
+        int effectiveDay = currentDay % 25;
+        if (effectiveDay == 0 && currentDay > 0) {
+            effectiveDay = 25;
+        }
+        return effectiveDay;
     }
 }

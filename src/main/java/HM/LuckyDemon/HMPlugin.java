@@ -35,6 +35,9 @@ public class HMPlugin extends JavaPlugin {
         // Registrar mecánicas día 20+
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day20MechanicsListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.LootModifierListener(), this);
+        
+        // Registrar mecánicas día 25+ (Ghast demoníaco)
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.GhastFireballListener(), this);
 
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);

@@ -111,7 +111,30 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        // (Línea de debug borrada)
+        // Verificar si es un slime/magma que viene de una división (día 25+)
+        if (HM.LuckyDemon.managers.GameManager.getInstance().getDay() >= 25) {
+            if (e.getEntity() instanceof org.bukkit.entity.Slime) {
+                org.bukkit.entity.Slime slime = (org.bukkit.entity.Slime) e.getEntity();
+                
+                // Si el spawn es por SLIME_SPLIT, marcarlo inmediatamente
+                if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) {
+                    // Marcar según el tipo
+                    if (slime instanceof org.bukkit.entity.MagmaCube) {
+                        slime.getPersistentDataContainer().set(
+                            new NamespacedKey(HMPlugin.getInstance(), "magma_division"),
+                            PersistentDataType.BYTE,
+                            (byte) 1
+                        );
+                    } else {
+                        slime.getPersistentDataContainer().set(
+                            new NamespacedKey(HMPlugin.getInstance(), "slime_division"),
+                            PersistentDataType.BYTE,
+                            (byte) 1
+                        );
+                    }
+                }
+            }
+        }
 
         // Delay de 1 tick para asegurar que el mob esté completamente cargado
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
@@ -125,20 +148,25 @@ public class PlayerListener implements Listener {
     public void onEntityDeath(EntityDeathEvent e) {
         // Verificar si la entidad debe soltar drops según el día actual
         if (!HMPlugin.getInstance().getDifficultyManager().shouldDropItems(e.getEntity())) {
-            // Eliminar todos los drops y experiencia
             e.getDrops().clear();
             e.setDroppedExp(0);
         }
 
-        // Ravager especial con Tótem de Inmortalidad (1% chance, día 20+)
+        // Ravager especial con Tótem de Inmortalidad
         if (e.getEntity() instanceof org.bukkit.entity.Ravager) {
             org.bukkit.entity.Ravager ravager = (org.bukkit.entity.Ravager) e.getEntity();
 
-            // Verificar si tiene el nombre especial (marcado en DifficultyManager)
-            if (ravager.customName() != null &&
-                    ravager.customName().toString().contains("Ravager Especial")) {
-
-                // 1% de probabilidad de dropear T ótem
+            // Verificar si tiene chance de drop configurado (Día 25+)
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "totem_drop_chance");
+            if (ravager.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.INTEGER)) {
+                int chance = ravager.getPersistentDataContainer().get(key, org.bukkit.persistence.PersistentDataType.INTEGER);
+                
+                if (new java.util.Random().nextInt(100) < chance) {
+                    e.getDrops().add(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TOTEM_OF_UNDYING));
+                }
+            }
+            // Compatibilidad con día 20 (1% chance si tiene nombre especial)
+            else if (ravager.customName() != null && ravager.customName().toString().contains("Ravager Especial")) {
                 if (new java.util.Random().nextInt(100) == 0) {
                     e.getDrops().add(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TOTEM_OF_UNDYING));
                 }
@@ -219,8 +247,9 @@ public class PlayerListener implements Listener {
         world.strikeLightningEffect(player.getLocation());
         world.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
 
-        int currentDay = HM.LuckyDemon.managers.GameManager.getInstance().getDay();
-        int addedSeconds = currentDay * 3600;
+        // Usar el nuevo sistema de horas que resetea cada 25 días
+        int stormHours = HMPlugin.getInstance().getDifficultyManager().getStormHoursForCurrentDay();
+        int addedSeconds = stormHours * 3600;
         int addedTicks = addedSeconds * 20;
 
         if (world.hasStorm()) {
