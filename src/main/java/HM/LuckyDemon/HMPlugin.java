@@ -50,6 +50,9 @@ public class HMPlugin extends JavaPlugin {
         // Registrar mecánicas día 25+ (Ghast demoníaco)
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.GhastFireballListener(), this);
 
+        // Totem listener
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.TotemFailListener(), this);
+
         // Listener para bonus de armadura infernal
         getServer().getPluginManager().registerEvents(new ArmorSetListener(), this);
 

@@ -1,6 +1,8 @@
 package HM.LuckyDemon.managers;
 
 import HM.LuckyDemon.HMPlugin;
+
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
@@ -20,6 +22,8 @@ public class DifficultyManager {
     private int currentDay;
     private int difficultyLevel;
     private final Random random;
+    // private final java.util.Set<java.util.UUID> transformedEntities = new
+    // java.util.HashSet<>();
 
     public DifficultyManager(HMPlugin plugin) {
         this.plugin = plugin;
@@ -104,9 +108,19 @@ public class DifficultyManager {
                             Mob mob = (Mob) entity;
 
                             // Verificar si es un mob que debería ser agresivo
+                            // En día 30+, NO procesar Squids ni Bats (se transforman)
+                            boolean isDay30OrLater = currentDay >= 30;
+                            boolean isSquidOrBat = (mob instanceof org.bukkit.entity.Squid)
+                                    || (mob instanceof org.bukkit.entity.Bat);
+
                             if (mob instanceof Animals || mob instanceof AbstractVillager || mob instanceof Fish
                                     || mob instanceof Axolotl || mob instanceof Squid || mob instanceof Dolphin
                                     || mob instanceof org.bukkit.entity.Bat) {
+
+                                // SKIP Squids y Bats en día 30+ (se transforman)
+                                if (isDay30OrLater && isSquidOrBat) {
+                                    continue;
+                                }
 
                                 // A) SI NO TIENE LA MARCA, DARLE LA IA AGRESIVA AHORA MISMO
                                 if (!mob.getPersistentDataContainer().has(
@@ -130,7 +144,9 @@ public class DifficultyManager {
     // ========== EFECTOS A MOBS ==========
 
     public void applyMobEffects(LivingEntity entity) {
-        if (currentDay >= 25) {
+        if (currentDay >= 30) {
+            applyDay30Effects(entity);
+        } else if (currentDay >= 25) {
             applyDay25Effects(entity);
         } else if (currentDay >= 20) {
             applyDay20Effects(entity);
@@ -178,10 +194,16 @@ public class DifficultyManager {
         if (entity instanceof Phantom) {
             applyPhantomEffects((Phantom) entity);
         }
-        if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
-                || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
-                || entity instanceof AbstractVillager) {
-            makeAggressive((Mob) entity, 2.0);
+        // En día 30+, NO hacer agresivos a Squids y Bats (se transforman)
+        boolean isDay30OrLater = currentDay >= 30;
+        boolean isSquidOrBat = (entity instanceof org.bukkit.entity.Squid) || (entity instanceof org.bukkit.entity.Bat);
+
+        if (!isDay30OrLater || !isSquidOrBat) {
+            if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
+                    || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
+                    || entity instanceof AbstractVillager) {
+                makeAggressive((Mob) entity, 2.0);
+            }
         }
         if (entity instanceof PigZombie) {
             makePigmanAngry((PigZombie) entity);
@@ -245,6 +267,147 @@ public class DifficultyManager {
         // DÍA 25: Ghasts Demoníacos
         if (entity instanceof Ghast) {
             applyDemonicGhastEffects((Ghast) entity);
+        }
+
+        // DÍA 30: Creepers eléctricos
+        if (entity instanceof org.bukkit.entity.Creeper) {
+            makeCreperCharged((org.bukkit.entity.Creeper) entity);
+        }
+    }
+
+    private void applyDay30Effects(LivingEntity entity) {
+        // Verificar si el mob ya fue transformado (evitar loops infinitos)
+        org.bukkit.NamespacedKey transformedKey = new org.bukkit.NamespacedKey(plugin, "transformed_mob");
+        if (entity.getPersistentDataContainer().has(transformedKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+            return; // Ya fue procesado, no hacer nada
+        }
+
+        // IMPORTANTE: NO marcar Bats ni Squids aquí, porque deben transformarse en
+        // PlayerListener
+        if (!(entity instanceof org.bukkit.entity.Bat) && !(entity instanceof org.bukkit.entity.Squid)) {
+            // Marcar como procesado ANTES de aplicar efectos del día 25
+            entity.getPersistentDataContainer().set(transformedKey, org.bukkit.persistence.PersistentDataType.BYTE,
+                    (byte) 1);
+        }
+
+        // Aplicar efectos del día 25
+        applyDay25Effects(entity);
+
+        // DÍA 30: Creepers eléctricos
+        if (entity instanceof org.bukkit.entity.Creeper) {
+            makeCreperCharged((org.bukkit.entity.Creeper) entity);
+        }
+
+        // Aplicar nombres especiales a mobs especiales
+        applySpecialMobNames(entity);
+    }
+
+    /**
+     * DÍA 30: Transformar calamar en guardián con Speed II
+     */
+    private void transformSquidToGuardian(org.bukkit.entity.Squid squid) {
+        org.bukkit.Location loc = squid.getLocation();
+        org.bukkit.World world = squid.getWorld();
+
+        // Remover el calamar INMEDIATAMENTE
+        squid.remove();
+
+        // Spawnear guardián INMEDIATAMENTE (sin delay)
+        org.bukkit.entity.Guardian guardian = (org.bukkit.entity.Guardian) world.spawnEntity(
+                loc,
+                org.bukkit.entity.EntityType.GUARDIAN);
+
+        // MARCAR INMEDIATAMENTE como transformado (ANTES de que se procese)
+        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "transformed_mob");
+        guardian.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+        // Aplicar Speed II
+        guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+
+        // Nombre especial (sin nametag visible)
+        guardian.customName(net.kyori.adventure.text.Component.text("Guardián Acuático")
+                .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        guardian.setCustomNameVisible(false);
+
+        // Marcar también con un segundo marcador para evitar re-procesamiento
+        guardian.getPersistentDataContainer().set(
+                new org.bukkit.NamespacedKey(plugin, "skip_effects"),
+                org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
+    }
+
+    /**
+     * DÍA 30: Transformar murciélago en blaze con Resistencia II
+     */
+    private void transformBatToBlaze(org.bukkit.entity.Bat bat) {
+        org.bukkit.Location loc = bat.getLocation();
+        org.bukkit.World world = bat.getWorld();
+
+        // Remover el murciélago INMEDIATAMENTE
+        bat.remove();
+
+        // Spawnear blaze INMEDIATAMENTE (sin delay)
+        org.bukkit.entity.Blaze blaze = (org.bukkit.entity.Blaze) world.spawnEntity(
+                loc,
+                org.bukkit.entity.EntityType.BLAZE);
+
+        // MARCAR INMEDIATAMENTE como transformado
+        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "transformed_mob");
+        blaze.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+        // Aplicar Resistencia II
+        blaze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
+
+        // Nombre especial (sin nametag visible)
+        blaze.customName(net.kyori.adventure.text.Component.text("Blaze Infernal")
+                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        blaze.setCustomNameVisible(false);
+
+        // Marcar también con un segundo marcador para evitar re-procesamiento
+        blaze.getPersistentDataContainer().set(
+                new org.bukkit.NamespacedKey(plugin, "skip_effects"),
+                org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
+    }
+
+    /**
+     * DÍA 30: Hacer creeper eléctrico (charged)
+     */
+    private void makeCreperCharged(org.bukkit.entity.Creeper creeper) {
+        creeper.setPowered(true);
+
+        // Nombre especial
+        creeper.customName(net.kyori.adventure.text.Component.text("Creeper Eléctrico")
+                .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        creeper.setCustomNameVisible(false);
+    }
+
+    /**
+     * DÍA 30: Aplicar nombres especiales a mobs especiales
+     */
+    private void applySpecialMobNames(LivingEntity entity) {
+        // Arañas con jinete (día 20+)
+        if (entity instanceof org.bukkit.entity.Spider) {
+            if (!entity.getPassengers().isEmpty()) {
+                entity.customName(net.kyori.adventure.text.Component.text("Araña Jinete")
+                        .color(net.kyori.adventure.text.format.NamedTextColor.RED)
+                        .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                entity.setCustomNameVisible(false);
+            }
+        }
+
+        // Ravagers especiales (día 25+)
+        if (entity instanceof org.bukkit.entity.Ravager) {
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "totem_drop_chance");
+            if (entity.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.INTEGER)) {
+                entity.customName(net.kyori.adventure.text.Component.text("Ravager Élite")
+                        .color(net.kyori.adventure.text.format.NamedTextColor.DARK_RED)
+                        .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                entity.setCustomNameVisible(false);
+            }
         }
     }
 
@@ -785,6 +948,10 @@ public class DifficultyManager {
 
     public boolean isDay25OrLater() {
         return currentDay >= 25;
+    }
+
+    public boolean isDay30OrLater() {
+        return currentDay >= 30;
     }
 
     /**

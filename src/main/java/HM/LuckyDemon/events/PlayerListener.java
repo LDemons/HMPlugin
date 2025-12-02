@@ -16,10 +16,12 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.block.Skull;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Animals;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+
+import HM.LuckyDemon.managers.GameManager;
 import HM.LuckyDemon.managers.ScoreboardManager;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -36,6 +38,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
@@ -43,6 +46,9 @@ public class PlayerListener implements Listener {
 
     // Set para rastrear jugadores que ya vieron el mensaje de PvP
     private final Set<UUID> pvpMessageShown = new HashSet<>();
+    private final java.util.Map<org.bukkit.Location, Long> transformCooldowns = new java.util.HashMap<>();
+    private final java.util.Random random = new java.util.Random();    
+    
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
@@ -118,53 +124,137 @@ public class PlayerListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent e) {
-        // Verificar si es un slime/magma que viene de una división (día 25+)
-        if (HM.LuckyDemon.managers.GameManager.getInstance().getDay() >= 25) {
-            if (e.getEntity() instanceof org.bukkit.entity.Slime) {
-                org.bukkit.entity.Slime slime = (org.bukkit.entity.Slime) e.getEntity();
+        // SKIP mobs marcados
+        NamespacedKey skipKey = new NamespacedKey(HMPlugin.getInstance(), "skip_effects");
+        NamespacedKey transformedKey = new NamespacedKey(HMPlugin.getInstance(), "transformed_mob");
+        
+        if (e.getEntity().getPersistentDataContainer().has(skipKey, PersistentDataType.BYTE)) {
+            return;
+        }
+        
+        if (e.getEntity().getPersistentDataContainer().has(transformedKey, PersistentDataType.BYTE)) {
+            return;
+        }
+        
+        // IMPORTANTE: Ignorar spawns personalizados (CUSTOM)
+        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
+            return;
+        }
 
-                // Si el spawn es por SLIME_SPLIT, heredar marcadores del padre
+        int currentDay = GameManager.getInstance().getDay();
+        
+        // DÍA 30+: Sistema de transformación con cooldown
+        if (currentDay >= 30) {
+            Location loc = e.getLocation();
+            
+            // Limpiar cooldowns antiguos (más de 5 segundos)
+            transformCooldowns.entrySet().removeIf(entry -> 
+                System.currentTimeMillis() - entry.getValue() > 5000);
+            
+            // Verificar cooldown en esta ubicación
+            String locKey = String.format("%d_%d_%d", 
+                loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+            
+            // Bat -> 30% Blaze, 70% cancelar
+            if (e.getEntity() instanceof Bat) {
+                // Verificar si ya hubo una transformación reciente aquí
+                boolean onCooldown = transformCooldowns.values().stream()
+                    .anyMatch(time -> System.currentTimeMillis() - time < 1000);
+                
+                if (onCooldown) {
+                    e.setCancelled(true);
+                    return;
+                }
+                
+                if (random.nextInt(100) < 30) {
+                    // 30% transformar
+                    e.setCancelled(true);
+                    transformCooldowns.put(loc.clone(), System.currentTimeMillis());
+                    
+                    Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+                        Blaze blaze = (Blaze) loc.getWorld().spawnEntity(loc, EntityType.BLAZE);
+                        blaze.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
+                        blaze.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
+                        blaze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
+                        blaze.customName(net.kyori.adventure.text.Component.text("Blaze Infernal")
+                                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
+                                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                        blaze.setCustomNameVisible(false);
+                    }, 5L);
+                } else {
+                    // 70% cancelar
+                    e.setCancelled(true);
+                }
+                return;
+            }
+
+            // Squid -> 30% Guardian, 70% cancelar
+            if (e.getEntity() instanceof Squid) {
+                boolean onCooldown = transformCooldowns.values().stream()
+                    .anyMatch(time -> System.currentTimeMillis() - time < 1000);
+                
+                if (onCooldown) {
+                    e.setCancelled(true);
+                    return;
+                }
+                
+                if (random.nextInt(100) < 30) {
+                    // 30% transformar
+                    e.setCancelled(true);
+                    transformCooldowns.put(loc.clone(), System.currentTimeMillis());
+                    
+                    Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+                        Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc, EntityType.GUARDIAN);
+                        guardian.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
+                        guardian.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
+                        guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                        guardian.customName(net.kyori.adventure.text.Component.text("Guardián Acuático")
+                                .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
+                                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                        guardian.setCustomNameVisible(false);
+                    }, 5L);
+                } else {
+                    // 70% cancelar
+                    e.setCancelled(true);
+                }
+                return;
+            }
+        }
+
+        // DÍA 25+: Marcar slimes de división
+        if (currentDay >= 25) {
+            if (e.getEntity() instanceof Slime) {
+                Slime slime = (Slime) e.getEntity();
+
                 if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) {
-                    // Buscar el slime padre más cercano
-                    org.bukkit.entity.Slime parent = findParentSlime(slime);
+                    Slime parent = findParentSlime(slime);
 
                     if (parent != null) {
-                        // Heredar marcadores del padre
-                        if (slime instanceof org.bukkit.entity.MagmaCube) {
-                            // Verificar si el padre era un Giga Magma
+                        if (slime instanceof MagmaCube) {
                             NamespacedKey gigaKey = new NamespacedKey(HMPlugin.getInstance(), "giga_magma");
                             if (parent.getPersistentDataContainer().has(gigaKey, PersistentDataType.BYTE)) {
-                                // Heredar el marcador de giga
                                 slime.getPersistentDataContainer().set(gigaKey, PersistentDataType.BYTE, (byte) 1);
                             }
-
-                            // Marcar como división
                             slime.getPersistentDataContainer().set(
                                     new NamespacedKey(HMPlugin.getInstance(), "magma_division"),
-                                    PersistentDataType.BYTE,
-                                    (byte) 1);
+                                    PersistentDataType.BYTE, (byte) 1);
                         } else {
-                            // Verificar si el padre era un Giga Slime
                             NamespacedKey gigaKey = new NamespacedKey(HMPlugin.getInstance(), "giga_slime");
                             if (parent.getPersistentDataContainer().has(gigaKey, PersistentDataType.BYTE)) {
-                                // Heredar el marcador de giga
                                 slime.getPersistentDataContainer().set(gigaKey, PersistentDataType.BYTE, (byte) 1);
                             }
-
-                            // Marcar como división
                             slime.getPersistentDataContainer().set(
                                     new NamespacedKey(HMPlugin.getInstance(), "slime_division"),
-                                    PersistentDataType.BYTE,
-                                    (byte) 1);
+                                    PersistentDataType.BYTE, (byte) 1);
                         }
                     }
                 }
             }
         }
 
-        // Delay de 1 tick para asegurar que el mob esté completamente cargado
+        // Aplicar efectos normales con delay
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             if (e.getEntity().isValid() && !e.getEntity().isDead()) {
                 HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
