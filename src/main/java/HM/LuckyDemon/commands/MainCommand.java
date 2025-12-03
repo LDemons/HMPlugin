@@ -35,6 +35,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             MessageUtils.send(player, "<yellow>/hm items <white>- Entrega ítems especiales <gray>(Solo OP)");
             MessageUtils.send(player, "<yellow>/hm awake <white>- Muestra tiempo sin dormir y riesgo de Phantoms");
             MessageUtils.send(player,
+                    "<yellow>/hm netheriteArmor <white>- Obtener armadura completa de Netherite <gray>(Día 25-29, Solo OP)");
+            MessageUtils.send(player,
                     "<yellow>/hm mensaje <1|2> <texto> <white>- Establece mensaje de muerte por vida");
             MessageUtils.send(player, "<yellow>/hm lives <white>- Muestra tus vidas restantes");
             MessageUtils.send(player,
@@ -355,6 +357,43 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("netheriteArmor")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+
+            // Verificar que el día esté entre 25 y 29
+            int currentDay = GameManager.getInstance().getDay();
+            if (currentDay < 25 || currentDay > 29) {
+                MessageUtils.send(player, "<red>Este comando solo está disponible del día 25 al 29.");
+                MessageUtils.send(player, "<gray>Día actual: " + currentDay);
+                return true;
+            }
+
+            // Crear las 4 piezas de armadura de netherite especial
+            org.bukkit.inventory.ItemStack helmet = createSpecialNetheriteArmor(org.bukkit.Material.NETHERITE_HELMET,
+                    "Casco Infernal");
+            org.bukkit.inventory.ItemStack chestplate = createSpecialNetheriteArmor(
+                    org.bukkit.Material.NETHERITE_CHESTPLATE, "Pechera Infernal");
+            org.bukkit.inventory.ItemStack leggings = createSpecialNetheriteArmor(
+                    org.bukkit.Material.NETHERITE_LEGGINGS, "Pantalones Infernales");
+            org.bukkit.inventory.ItemStack boots = createSpecialNetheriteArmor(org.bukkit.Material.NETHERITE_BOOTS,
+                    "Botas Infernales");
+
+            // Agregar al inventario
+            player.getInventory().addItem(helmet);
+            player.getInventory().addItem(chestplate);
+            player.getInventory().addItem(leggings);
+            player.getInventory().addItem(boots);
+
+            MessageUtils.send(player,
+                    "<gradient:dark_purple:light_purple><bold>¡Armadura de Netherite Infernal entregada!</gradient>");
+            MessageUtils.send(player, "<gray>Revisa tu inventario. La armadura es <dark_purple>irrompible<gray>.");
+            player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_ANVIL_USE, 1.0f, 1.0f);
+            return true;
+        }
+
         MessageUtils.send(player, "<yellow>Comando desconocido. Usa: /hm para ver la lista de comandos.");
         return true;
     }
@@ -367,7 +406,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
-                    "addlife", "reducestorm", "resetdifficulty", "resethealth");
+                    "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
@@ -416,5 +455,39 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         }
 
         return completions;
+    }
+
+    /**
+     * Crear pieza de armadura de Netherite especial (irrompible)
+     */
+    private org.bukkit.inventory.ItemStack createSpecialNetheriteArmor(org.bukkit.Material material,
+            String displayName) {
+        org.bukkit.inventory.ItemStack armor = new org.bukkit.inventory.ItemStack(material);
+        org.bukkit.inventory.meta.ItemMeta meta = armor.getItemMeta();
+
+        if (meta != null) {
+            // Nombre personalizado
+            meta.displayName(
+                    MessageUtils.format("<gradient:dark_purple:light_purple><bold>" + displayName + "</gradient>"));
+
+            // Hacer irrompible
+            meta.setUnbreakable(true);
+
+            // Lore explicativo
+            java.util.List<net.kyori.adventure.text.Component> lore = new java.util.ArrayList<>();
+            lore.add(MessageUtils.format("<gray>Armadura especial del Día 25+"));
+            lore.add(MessageUtils.format("<dark_purple>Irrompible"));
+            lore.add(MessageUtils.format(""));
+            lore.add(MessageUtils.format("<gold>Set completo: <yellow>+4 ❤"));
+            meta.lore(lore);
+
+            // Marcar como armadura especial
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "infernal_armor");
+            meta.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+            armor.setItemMeta(meta);
+        }
+
+        return armor;
     }
 }

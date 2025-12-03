@@ -524,9 +524,10 @@ public class DifficultyManager {
             return;
 
         if (skeletonClass == 1) {
-            // Wither - Cota Malla - Punch 20 - 20❤
+            // ESQUELETO TÁCTICO - Wither - Cota Malla - Punch 30 + Power 25 - 20❤
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 20);
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 30);
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 25);
             equipment.setItemInMainHand(bow);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_CHESTPLATE));
@@ -535,40 +536,60 @@ public class DifficultyManager {
             skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
             skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 2) {
-            // Normal - Hierro - Hacha Fire Aspect 2 - 10❤
-            org.bukkit.inventory.ItemStack axe = new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_AXE);
-            axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 2);
+            // ESQUELETO INFERNAL - Normal - Hierro - Hacha de Diamante Fire Aspect X - 20❤
+            org.bukkit.inventory.ItemStack axe = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_AXE);
+            axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 10);
             equipment.setItemInMainHand(axe);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_CHESTPLATE));
             equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_LEGGINGS));
             equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_BOOTS));
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(20.0);
-            skeletonEntity.setHealth(20.0);
+            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
+            skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 3) {
-            // Normal - Diamante - Arco - 10❤
+            // ESQUELETO GUERRERO - Normal - Diamante Full Protección 4 - Arco - 20❤
             equipment.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW));
-            equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_HELMET));
-            equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_CHESTPLATE));
-            equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_LEGGINGS));
-            equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_BOOTS));
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(20.0);
-            skeletonEntity.setHealth(20.0);
+
+            org.bukkit.inventory.ItemStack helmet = new org.bukkit.inventory.ItemStack(
+                    org.bukkit.Material.DIAMOND_HELMET);
+            org.bukkit.inventory.ItemStack chestplate = new org.bukkit.inventory.ItemStack(
+                    org.bukkit.Material.DIAMOND_CHESTPLATE);
+            org.bukkit.inventory.ItemStack leggings = new org.bukkit.inventory.ItemStack(
+                    org.bukkit.Material.DIAMOND_LEGGINGS);
+            org.bukkit.inventory.ItemStack boots = new org.bukkit.inventory.ItemStack(
+                    org.bukkit.Material.DIAMOND_BOOTS);
+
+            helmet.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+            chestplate.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+            leggings.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+            boots.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+
+            equipment.setHelmet(helmet);
+            equipment.setChestplate(chestplate);
+            equipment.setLeggings(leggings);
+            equipment.setBoots(boots);
+
+            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
+            skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 4) {
-            // Normal - Oro - Ballesta Sharpness 20 - 20❤
+            // ESQUELETO ASESINO - Normal - Oro - Ballesta Sharpness 25 + Velocidad 2 - 20❤
             org.bukkit.inventory.ItemStack crossbow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.CROSSBOW);
-            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, 20);
+            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, 25);
             equipment.setItemInMainHand(crossbow);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_CHESTPLATE));
             equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_LEGGINGS));
             equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_BOOTS));
+
+            // Aplicar Velocidad 2
+            skeletonEntity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+
             skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
             skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 5) {
-            // Wither - Cuero Rojo - Power 10 - 20❤
+            // ESQUELETO PESADILLA - Wither - Cuero Rojo - Power L (50) - 20❤
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 10);
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 50);
             equipment.setItemInMainHand(bow);
 
             org.bukkit.inventory.ItemStack helmet = new org.bukkit.inventory.ItemStack(
