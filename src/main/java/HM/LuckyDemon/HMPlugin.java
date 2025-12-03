@@ -33,6 +33,9 @@ public class HMPlugin extends JavaPlugin {
         // Inicializar scoreboard de vida
         ScoreboardManager.getInstance().initialize();
 
+        // Registrar el listener de chat
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.ChatListener(this), this);
+
         // Registrar Recetas
         HM.LuckyDemon.recipes.RecipeManager.registerRecipes();
 
@@ -59,6 +62,7 @@ public class HMPlugin extends JavaPlugin {
 
         // Registrar el listener de Bedrock (Día 30)
         getServer().getPluginManager().registerEvents(new BedrockListener(this), this);
+
 
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
