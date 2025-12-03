@@ -313,6 +313,16 @@ public class DifficultyManager {
             applyIronGolemSpeed((IronGolem) entity);
         }
 
+        // DÍA 30: Endermans con Fuerza II
+        if (entity instanceof org.bukkit.entity.Enderman) {
+            applyEndermanEffects((org.bukkit.entity.Enderman) entity);
+        }
+
+        // DÍA 30: Silverfish con 5 efectos aleatorios
+        if (entity instanceof org.bukkit.entity.Silverfish) {
+            applySilverfishEffects((org.bukkit.entity.Silverfish) entity);
+        }
+
         // Aplicar nombres especiales a mobs especiales
         applySpecialMobNames(entity);
     }
@@ -1036,5 +1046,28 @@ public class DifficultyManager {
      */
     private void applyIronGolemSpeed(IronGolem golem) {
         golem.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 3));
+    }
+
+    /**
+     * DÍA 30: Endermans con Fuerza II
+     */
+    private void applyEndermanEffects(org.bukkit.entity.Enderman enderman) {
+        enderman.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
+    }
+
+    /**
+     * DÍA 30: Silverfish con 5 efectos aleatorios (igual que Day 25 Spiders)
+     */
+    private void applySilverfishEffects(org.bukkit.entity.Silverfish silverfish) {
+        int effectCount = 5;
+        List<PotionEffectType> availableEffects = getAvailableEffects();
+
+        for (int i = 0; i < effectCount && !availableEffects.isEmpty(); i++) {
+            int index = random.nextInt(availableEffects.size());
+            PotionEffectType effectType = availableEffects.remove(index);
+            int duration = Integer.MAX_VALUE;
+            int amplifier = getAmplifierForEffect(effectType);
+            silverfish.addPotionEffect(new PotionEffect(effectType, duration, amplifier));
+        }
     }
 }

@@ -6,6 +6,7 @@ import HM.LuckyDemon.utils.MessageUtils;
 import HM.LuckyDemon.events.AncientDebrisListener;
 import HM.LuckyDemon.managers.ScoreboardManager;
 import HM.LuckyDemon.events.ArmorSetListener;
+import HM.LuckyDemon.events.BedrockListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class HMPlugin extends JavaPlugin {
@@ -55,6 +56,9 @@ public class HMPlugin extends JavaPlugin {
 
         // Listener para bonus de armadura infernal
         getServer().getPluginManager().registerEvents(new ArmorSetListener(), this);
+
+        // Registrar el listener de Bedrock (Día 30)
+        getServer().getPluginManager().registerEvents(new BedrockListener(this), this);
 
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
