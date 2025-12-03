@@ -8,4 +8,4 @@ commands:
   hm:
     description: Comando principal del plugin
     usage: /hm [day|items|awake|mensaje|lives|resetlives|addlife|reducestorm|resetdifficulty]
-    aliases: [permadeath, pdc]
+    aliases: [permadeath]

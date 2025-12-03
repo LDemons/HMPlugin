@@ -51,8 +51,11 @@ public class ScoreboardManager {
                     net.kyori.adventure.text.Component.text("❤"));
         }
 
-        // Mostrar debajo del nombre
-        healthObjective.setDisplaySlot(DisplaySlot.BELOW_NAME);
+        // Configurar para mostrar corazones en lugar de números (siempre)
+        healthObjective.setRenderType(org.bukkit.scoreboard.RenderType.HEARTS);
+
+        // Mostrar en el tabulador (player list)
+        healthObjective.setDisplaySlot(DisplaySlot.PLAYER_LIST);
 
         // Aplicar scoreboard a todos los jugadores online
         for (Player player : Bukkit.getOnlinePlayers()) {

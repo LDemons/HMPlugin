@@ -28,6 +28,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -47,8 +48,7 @@ public class PlayerListener implements Listener {
     // Set para rastrear jugadores que ya vieron el mensaje de PvP
     private final Set<UUID> pvpMessageShown = new HashSet<>();
     private final java.util.Map<org.bukkit.Location, Long> transformCooldowns = new java.util.HashMap<>();
-    private final java.util.Random random = new java.util.Random();    
-    
+    private final java.util.Random random = new java.util.Random();
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
@@ -76,10 +76,13 @@ public class PlayerListener implements Listener {
         // Verificar si se puede saltar la noche según el día
         if (!HMPlugin.getInstance().getDifficultyManager().canSkipNight()) {
             e.setCancelled(true);
+            // Resetear el contador de phantoms aunque no se pueda dormir
+            e.getPlayer().setStatistic(org.bukkit.Statistic.TIME_SINCE_REST, 0);
             int specialDay = HMPlugin.getInstance().getDifficultyManager().getSpecialRulesDay();
             MessageUtils.send(e.getPlayer(),
-                    "<red>☠ A partir del día " + specialDay + ", la noche no se puede saltar. El ciclo continúa...");
-            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_ENDERMAN_SCREAM, 0.5f, 0.8f);
+                    "<red>☠ A partir del día " + specialDay
+                            + ", la noche no se puede saltar... <gray>(Pero te has relajado, <green>los Phantoms se han reiniciado<gray>)");
+            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.8f);
             return;
         }
 
@@ -110,6 +113,38 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
+    public void onEnderEyePlace(PlayerInteractEvent e) {
+        // Verificar si el jugador está haciendo clic derecho
+        if (e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+
+        // Verificar si el bloque clickeado es un End Portal Frame
+        if (e.getClickedBlock() == null || e.getClickedBlock().getType() != Material.END_PORTAL_FRAME) {
+            return;
+        }
+
+        // Verificar si el jugador tiene un Ender Eye en la mano
+        ItemStack item = e.getItem();
+        if (item == null || item.getType() != Material.ENDER_EYE) {
+            return;
+        }
+
+        // Verificar el día actual
+        int currentDay = GameManager.getInstance().getDay();
+
+        // Bloquear hasta el día 29 (solo permitir desde el día 30)
+        if (currentDay < 30) {
+            e.setCancelled(true);
+            MessageUtils.send(e.getPlayer(),
+                    "<red>⚠ El portal al End está bloqueado hasta el <bold>Día 30</bold>.");
+            MessageUtils.send(e.getPlayer(),
+                    "<gray>Día actual: <yellow>" + currentDay + "<gray>/30");
+            e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.5f, 0.5f);
+        }
+    }
+
+    @EventHandler
     public void onPvP(EntityDamageByEntityEvent e) {
         // Cancelar PvP entre jugadores
         if (e.getDamager() instanceof Player && e.getEntity() instanceof Player) {
@@ -129,50 +164,49 @@ public class PlayerListener implements Listener {
         // SKIP mobs marcados
         NamespacedKey skipKey = new NamespacedKey(HMPlugin.getInstance(), "skip_effects");
         NamespacedKey transformedKey = new NamespacedKey(HMPlugin.getInstance(), "transformed_mob");
-        
+
         if (e.getEntity().getPersistentDataContainer().has(skipKey, PersistentDataType.BYTE)) {
             return;
         }
-        
+
         if (e.getEntity().getPersistentDataContainer().has(transformedKey, PersistentDataType.BYTE)) {
             return;
         }
-        
+
         // IMPORTANTE: Ignorar spawns personalizados (CUSTOM)
         if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
             return;
         }
 
         int currentDay = GameManager.getInstance().getDay();
-        
+
         // DÍA 30+: Sistema de transformación con cooldown
         if (currentDay >= 30) {
             Location loc = e.getLocation();
-            
+
             // Limpiar cooldowns antiguos (más de 5 segundos)
-            transformCooldowns.entrySet().removeIf(entry -> 
-                System.currentTimeMillis() - entry.getValue() > 5000);
-            
+            transformCooldowns.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > 5000);
+
             // Verificar cooldown en esta ubicación
-            String locKey = String.format("%d_%d_%d", 
-                loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-            
+            String locKey = String.format("%d_%d_%d",
+                    loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+
             // Bat -> 30% Blaze, 70% cancelar
             if (e.getEntity() instanceof Bat) {
                 // Verificar si ya hubo una transformación reciente aquí
                 boolean onCooldown = transformCooldowns.values().stream()
-                    .anyMatch(time -> System.currentTimeMillis() - time < 1000);
-                
+                        .anyMatch(time -> System.currentTimeMillis() - time < 1000);
+
                 if (onCooldown) {
                     e.setCancelled(true);
                     return;
                 }
-                
+
                 if (random.nextInt(100) < 30) {
                     // 30% transformar
                     e.setCancelled(true);
                     transformCooldowns.put(loc.clone(), System.currentTimeMillis());
-                    
+
                     Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                         Blaze blaze = (Blaze) loc.getWorld().spawnEntity(loc, EntityType.BLAZE);
                         blaze.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
@@ -193,18 +227,18 @@ public class PlayerListener implements Listener {
             // Squid -> 30% Guardian, 70% cancelar
             if (e.getEntity() instanceof Squid) {
                 boolean onCooldown = transformCooldowns.values().stream()
-                    .anyMatch(time -> System.currentTimeMillis() - time < 1000);
-                
+                        .anyMatch(time -> System.currentTimeMillis() - time < 1000);
+
                 if (onCooldown) {
                     e.setCancelled(true);
                     return;
                 }
-                
+
                 if (random.nextInt(100) < 30) {
                     // 30% transformar
                     e.setCancelled(true);
                     transformCooldowns.put(loc.clone(), System.currentTimeMillis());
-                    
+
                     Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                         Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc, EntityType.GUARDIAN);
                         guardian.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
@@ -541,9 +575,16 @@ public class PlayerListener implements Listener {
     }
 
     /**
-     * DÍA 25+: Manejar drops de armadura de Netherite especial
+     * DÍA 25-29: Manejar drops de armadura de Netherite especial
+     * A partir del día 30, estos mobs ya no dropean armadura
      */
     private void handleDay25ArmorDrops(EntityDeathEvent e) {
+        // Solo permitir drops entre día 25 y 29
+        int currentDay = GameManager.getInstance().getDay();
+        if (currentDay >= 30) {
+            return; // No dropear armadura a partir del día 30
+        }
+
         java.util.Random random = new java.util.Random();
         ItemStack armorPiece = null;
         int dropChance = 30; // Probabilidad por defecto: 30%
