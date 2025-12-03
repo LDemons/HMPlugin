@@ -1,7 +1,7 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="HMPlugin:jar">
-    <output-path>$PROJECT_DIR$/../../../SERVERS MAICRAFT/PAPER 1.21/plugins</output-path>
-    <root id="archive" name="HMPluggin.jar">
+    <output-path>$USER_HOME$/Desktop/server/plugins</output-path>
+    <root id="archive" name="HMPlugin.jar">
       <element id="module-output" name="HMPlugin" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/24.1.0/annotations-24.1.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib-jdk8/1.8.21/kotlin-stdlib-jdk8-1.8.21.jar" path-in-jar="/" />
