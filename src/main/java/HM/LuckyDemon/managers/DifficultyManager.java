@@ -298,6 +298,21 @@ public class DifficultyManager {
             makeCreperCharged((org.bukkit.entity.Creeper) entity);
         }
 
+        // DÍA 30: Pillagers invisibles con ballestas de Quick Charge X
+        if (entity instanceof org.bukkit.entity.Pillager) {
+            applyPillagerEffects((org.bukkit.entity.Pillager) entity);
+        }
+
+        // DÍA 30: Pigmans con armadura de diamante
+        if (entity instanceof PigZombie) {
+            applyPigmanDiamondArmor((PigZombie) entity);
+        }
+
+        // DÍA 30: Iron Golems con Velocidad IV
+        if (entity instanceof IronGolem) {
+            applyIronGolemSpeed((IronGolem) entity);
+        }
+
         // Aplicar nombres especiales a mobs especiales
         applySpecialMobNames(entity);
     }
@@ -582,6 +597,18 @@ public class DifficultyManager {
 
             skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
             skeletonEntity.setHealth(40.0);
+        }
+
+        // DÍA 30: Flechas de Daño II en mano izquierda para todos los skeleton riders
+        if (currentDay >= 30) {
+            org.bukkit.inventory.ItemStack arrow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.TIPPED_ARROW);
+            org.bukkit.inventory.meta.PotionMeta arrowMeta = (org.bukkit.inventory.meta.PotionMeta) arrow.getItemMeta();
+            if (arrowMeta != null) {
+                arrowMeta.addCustomEffect(new PotionEffect(PotionEffectType.INSTANT_DAMAGE, 1, 1), true);
+                arrow.setItemMeta(arrowMeta);
+            }
+            equipment.setItemInOffHand(arrow);
+            equipment.setItemInOffHandDropChance(0.0f);
         }
 
         equipment.setHelmetDropChance(0.0f);
@@ -967,5 +994,47 @@ public class DifficultyManager {
         // Reset cada 25 días: día 1-24 = 1-24hr, día 25 = 1hr, día 26 = 2hr, etc.
         int effectiveDay = ((currentDay - 1) % 25) + 1;
         return effectiveDay;
+    }
+
+    /**
+     * DÍA 30: Pillagers invisibles con ballesta Quick Charge X
+     */
+    private void applyPillagerEffects(org.bukkit.entity.Pillager pillager) {
+        // Invisibilidad permanente
+        pillager.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
+
+        // Ballesta con Quick Charge X
+        org.bukkit.inventory.EntityEquipment equipment = pillager.getEquipment();
+        if (equipment != null) {
+            org.bukkit.inventory.ItemStack crossbow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.CROSSBOW);
+            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 10);
+            equipment.setItemInMainHand(crossbow);
+            equipment.setItemInMainHandDropChance(0.0f);
+        }
+    }
+
+    /**
+     * DÍA 30: Pigmans con armadura de diamante
+     */
+    private void applyPigmanDiamondArmor(PigZombie pigman) {
+        org.bukkit.inventory.EntityEquipment equipment = pigman.getEquipment();
+        if (equipment != null) {
+            equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_HELMET));
+            equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_CHESTPLATE));
+            equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_LEGGINGS));
+            equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_BOOTS));
+
+            equipment.setHelmetDropChance(0.0f);
+            equipment.setChestplateDropChance(0.0f);
+            equipment.setLeggingsDropChance(0.0f);
+            equipment.setBootsDropChance(0.0f);
+        }
+    }
+
+    /**
+     * DÍA 30: Iron Golems con Velocidad IV
+     */
+    private void applyIronGolemSpeed(IronGolem golem) {
+        golem.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 3));
     }
 }
