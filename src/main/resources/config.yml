@@ -15,3 +15,8 @@ game:
   day: 1
   # Activar el ban al morir
   ban_enabled: true
+
+discord_api:
+  base_url: "https://bot.warevision.net"
+  api_key: ""
+  heartbeat_interval_secs: 15

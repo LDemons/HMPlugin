@@ -5,6 +5,7 @@ import HM.LuckyDemon.managers.DifficultyManager;
 import HM.LuckyDemon.utils.MessageUtils;
 import HM.LuckyDemon.events.AncientDebrisListener;
 import HM.LuckyDemon.managers.ScoreboardManager;
+import HM.LuckyDemon.tasks.HeartbeatTask;
 import HM.LuckyDemon.events.ArmorSetListener;
 import HM.LuckyDemon.events.BedrockListener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -66,6 +67,14 @@ public class HMPlugin extends JavaPlugin {
 
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
+
+        // --- NUEVA TAREA: HEARTBEAT DE DISCORD ---
+        // 20 ticks = 1 segundo. Leer la configuración del intervalo.
+        int intervalSecs = getConfig().getInt("discord_api.heartbeat_interval_secs", 15);
+        long intervalTicks = intervalSecs * 20L; 
+        
+        // La tarea comienza inmediatamente (0L) y se repite cada X ticks
+        new HeartbeatTask().runTaskTimer(this, 0L, intervalTicks);
 
         difficultyManager = new DifficultyManager(this);
 
