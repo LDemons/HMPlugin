@@ -9,3 +9,14 @@ commands:
     description: Comando principal del plugin
     usage: /hm [day|items|awake|mensaje|lives|resetlives|addlife|reducestorm|resetdifficulty]
     aliases: [permadeath]
+  hmreload:
+    description: Recarga la configuración del plugin
+    usage: /<command>
+    aliases: [hmr, permadeathreload]
+    permission: hmplugin.reload
+    permission-message: No tienes permiso para usar este comando.
+
+permissions:
+  hmplugin.reload:
+    description: Permite recargar la configuración del plugin
+    default: op

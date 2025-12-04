@@ -28,8 +28,9 @@ public class HMPlugin extends JavaPlugin {
         MessageUtils.send(this.getServer().getConsoleSender(),
                 "<gray>Versión corriendo en: <yellow>" + getServer().getVersion());
 
-        // Registrar comando
+        // Registrar comandos
         getCommand("hm").setExecutor(new HM.LuckyDemon.commands.MainCommand());
+        getCommand("hmreload").setExecutor(new HM.LuckyDemon.commands.ReloadCommand(this));
 
         // Inicializar scoreboard de vida
         ScoreboardManager.getInstance().initialize();
