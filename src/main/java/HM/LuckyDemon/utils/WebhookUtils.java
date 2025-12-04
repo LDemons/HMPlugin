@@ -12,8 +12,6 @@ import java.nio.charset.StandardCharsets;
 
 public class WebhookUtils {
 
-    private static final String WEBHOOK_URL = "https://n8n.warevision.net/webhook/a3062da4-c838-48f8-b355-2a82065a798f";
-
     public static void sendHeartbeat() {
         Bukkit.getScheduler().runTaskAsynchronously(HMPlugin.getInstance(), () -> {
             // Leer configuración
@@ -57,16 +55,24 @@ public class WebhookUtils {
     public static void sendDeathNotification(Player player, String deathCause, int remainingLives, int maxLives, String deathMessage) {
         Bukkit.getScheduler().runTaskAsynchronously(HMPlugin.getInstance(), () -> {
             try {
-                URL url = new URL(WEBHOOK_URL);
+                // Leer configuración del bot
+                String baseUrl = HMPlugin.getInstance().getConfig().getString("discord_api.base_url");
+                String apiKey = HMPlugin.getInstance().getConfig().getString("discord_api.api_key");
+                
+                // Endpoint para notificaciones de muerte
+                String fullUrl = baseUrl + "/player-death";
+                
+                URL url = new URL(fullUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("X-API-KEY", apiKey);
                 conn.setDoOutput(true);
 
                 JsonObject json = new JsonObject();
                 json.addProperty("playerName", player.getName());
                 json.addProperty("playerUUID", player.getUniqueId().toString());
-                json.addProperty("playerHeadUrl", "https://minotar.net/avatar/" + player.getUniqueId().toString() + "/100.png");
+                json.addProperty("playerHeadUrl", "https://minotar.net/avatar/" + player.getUniqueId().toString() + "/512.png");
                 json.addProperty("deathCause", deathCause);
                 json.addProperty("remainingLives", remainingLives);
                 json.addProperty("maxLives", maxLives);
@@ -80,14 +86,14 @@ public class WebhookUtils {
 
                 int responseCode = conn.getResponseCode();
                 if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
-                    Bukkit.getLogger().info("Webhook enviado correctamente para " + player.getName());
+                    Bukkit.getLogger().info("Notificación de muerte enviada correctamente para " + player.getName());
                 } else {
-                    Bukkit.getLogger().warning("Error al enviar webhook: " + responseCode);
+                    Bukkit.getLogger().warning("Error al enviar notificación de muerte: " + responseCode);
                 }
 
                 conn.disconnect();
             } catch (Exception e) {
-                Bukkit.getLogger().severe("Error al enviar webhook: " + e.getMessage());
+                Bukkit.getLogger().severe("Error al enviar notificación de muerte: " + e.getMessage());
                 e.printStackTrace();
             }
         });
