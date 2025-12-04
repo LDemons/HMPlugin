@@ -288,6 +288,34 @@ public class PlayerListener implements Listener {
             }
         }
 
+        // SPAWNS ESPECIALES EN EL END (DÍA 30+)
+        if (currentDay >= 30 && e.getLocation().getWorld().getEnvironment() == org.bukkit.World.Environment.THE_END) {
+            // Spawn Ender Ghast (2% probabilidad)
+            if (random.nextInt(100) < 2 && e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                Location loc = e.getLocation();
+                e.setCancelled(true);
+
+                Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+                    Ghast enderGhast = (Ghast) loc.getWorld().spawnEntity(loc, EntityType.GHAST);
+                    HMPlugin.getInstance().getDifficultyManager().applyMobEffects(enderGhast);
+                }, 2L);
+                return;
+            }
+
+            // Spawn Ender Creeper (10% probabilidad cuando spawneaCREEPER o realizado
+            // manualmente)
+            if (random.nextInt(100) < 10 && e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                Location loc = e.getLocation();
+                e.setCancelled(true);
+
+                Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+                    Creeper enderCreeper = (Creeper) loc.getWorld().spawnEntity(loc, EntityType.CREEPER);
+                    HMPlugin.getInstance().getDifficultyManager().applyMobEffects(enderCreeper);
+                }, 2L);
+                return;
+            }
+        }
+
         // Aplicar efectos normales con delay
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             if (e.getEntity().isValid() && !e.getEntity().isDead()) {
@@ -348,6 +376,254 @@ public class PlayerListener implements Listener {
         // DÍA 25+: Drops de armadura de Netherite especial
         if (HMPlugin.getInstance().getDifficultyManager().isDay25OrLater()) {
             handleDay25ArmorDrops(e);
+        }
+    }
+
+    @EventHandler
+    public void onShulkerDeath(EntityDeathEvent e) {
+        if (!(e.getEntity() instanceof org.bukkit.entity.Shulker)) {
+            return;
+        }
+
+        org.bukkit.entity.Shulker shulker = (org.bukkit.entity.Shulker) e.getEntity();
+        org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                "explosive_shulker");
+
+        // Verificar si es un Shulker Explosivo
+        if (shulker.getPersistentDataContainer().has(explosiveKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+            // Limpiar drops normales (para evitar duplicados)
+            e.getDrops().clear();
+
+            // Spawnear TNT activa en la ubicación del shulker
+            org.bukkit.entity.TNTPrimed tnt = (org.bukkit.entity.TNTPrimed) shulker.getWorld()
+                    .spawnEntity(shulker.getLocation(), org.bukkit.entity.EntityType.TNT);
+            tnt.setFuseTicks(40); // 2 segundos de fusión
+
+            // 20% drop de Shulker Shell NORMAL pero protegida de explosiones
+            if (new Random().nextInt(100) < 20) {
+                // Crear item normal
+                org.bukkit.inventory.ItemStack shulkerShell = new org.bukkit.inventory.ItemStack(
+                        org.bukkit.Material.SHULKER_SHELL, 1);
+
+                // Marcar el item como protegido de explosiones
+                org.bukkit.inventory.meta.ItemMeta meta = shulkerShell.getItemMeta();
+                if (meta != null) {
+                    org.bukkit.NamespacedKey protectedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                            "explosion_proof");
+                    meta.getPersistentDataContainer().set(protectedKey, org.bukkit.persistence.PersistentDataType.BYTE,
+                            (byte) 1);
+                    shulkerShell.setItemMeta(meta);
+                }
+
+                // Dropear el item
+                shulker.getWorld().dropItemNaturally(shulker.getLocation(), shulkerShell);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onItemDamage(org.bukkit.event.entity.EntityDamageEvent e) {
+        // Solo procesar items
+        if (!(e.getEntity() instanceof org.bukkit.entity.Item)) {
+            return;
+        }
+
+        // Solo proteger de explosiones
+        if (e.getCause() != org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION
+                && e.getCause() != org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION) {
+            return;
+        }
+
+        org.bukkit.entity.Item item = (org.bukkit.entity.Item) e.getEntity();
+        org.bukkit.inventory.ItemStack itemStack = item.getItemStack();
+
+        // Verificar si el item tiene la marca de protección
+        if (itemStack.hasItemMeta()) {
+            org.bukkit.inventory.meta.ItemMeta meta = itemStack.getItemMeta();
+            org.bukkit.NamespacedKey protectedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "explosion_proof");
+
+            if (meta.getPersistentDataContainer().has(protectedKey,
+                    org.bukkit.persistence.PersistentDataType.BYTE)) {
+                // Cancelar el daño (el item no desaparece)
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onShulkerBulletHit(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        // Verificar si el daño es causado por un proyectil de Shulker
+        if (!(e.getDamager() instanceof org.bukkit.entity.ShulkerBullet)) {
+            return;
+        }
+
+        org.bukkit.entity.ShulkerBullet bullet = (org.bukkit.entity.ShulkerBullet) e.getDamager();
+
+        // Verificar si el proyectil fue lanzado por un Shulker Explosivo
+        if (bullet.getShooter() instanceof org.bukkit.entity.Shulker) {
+            org.bukkit.entity.Shulker shulker = (org.bukkit.entity.Shulker) bullet.getShooter();
+            org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "explosive_shulker");
+
+            if (shulker.getPersistentDataContainer().has(explosiveKey,
+                    org.bukkit.persistence.PersistentDataType.BYTE)) {
+                // Solo spawnear TNT si golpea a un jugador
+                if (e.getEntity() instanceof Player) {
+                    org.bukkit.entity.TNTPrimed tnt = (org.bukkit.entity.TNTPrimed) bullet.getWorld()
+                            .spawnEntity(bullet.getLocation(), org.bukkit.entity.EntityType.TNT);
+                    tnt.setFuseTicks(40); // 2 segundos de fusión
+
+                    // Remover el proyectil
+                    bullet.remove();
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onShulkerBulletDestroyed(org.bukkit.event.entity.ProjectileHitEvent e) {
+        // Verificar si es un proyectil de Shulker
+        if (!(e.getEntity() instanceof org.bukkit.entity.ShulkerBullet)) {
+            return;
+        }
+
+        org.bukkit.entity.ShulkerBullet bullet = (org.bukkit.entity.ShulkerBullet) e.getEntity();
+
+        // Verificar si el proyectil fue lanzado por un Shulker Explosivo
+        if (bullet.getShooter() instanceof org.bukkit.entity.Shulker) {
+            org.bukkit.entity.Shulker shulker = (org.bukkit.entity.Shulker) bullet.getShooter();
+            org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "explosive_shulker");
+
+            if (shulker.getPersistentDataContainer().has(explosiveKey,
+                    org.bukkit.persistence.PersistentDataType.BYTE)) {
+                // Siempre spawnear TNT cuando el proyectil impacta (sin importar qué golpee)
+                org.bukkit.entity.TNTPrimed tnt = (org.bukkit.entity.TNTPrimed) bullet.getWorld()
+                        .spawnEntity(bullet.getLocation(), org.bukkit.entity.EntityType.TNT);
+                tnt.setFuseTicks(40); // 2 segundos de fusión
+            }
+        }
+    }
+
+    @EventHandler
+    public void onShulkerBulletDamaged(org.bukkit.event.entity.EntityDamageEvent e) {
+        // Verificar si es un proyectil de Shulker siendo destruido
+        if (!(e.getEntity() instanceof org.bukkit.entity.ShulkerBullet)) {
+            return;
+        }
+
+        org.bukkit.entity.ShulkerBullet bullet = (org.bukkit.entity.ShulkerBullet) e.getEntity();
+
+        // Verificar si el proyectil fue lanzado por un Shulker Explosivo
+        if (bullet.getShooter() instanceof org.bukkit.entity.Shulker) {
+            org.bukkit.entity.Shulker shulker = (org.bukkit.entity.Shulker) bullet.getShooter();
+            org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "explosive_shulker");
+
+            if (shulker.getPersistentDataContainer().has(explosiveKey,
+                    org.bukkit.persistence.PersistentDataType.BYTE)) {
+                // Spawnear TNT antes de que el proyectil desaparezca
+                org.bukkit.entity.TNTPrimed tnt = (org.bukkit.entity.TNTPrimed) bullet.getWorld()
+                        .spawnEntity(bullet.getLocation(), org.bukkit.entity.EntityType.TNT);
+                tnt.setFuseTicks(40); // 2 segundos de fusión
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEnderGhastArrowHit(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        // Solo procesar daño por flechas
+        if (!(e.getDamager() instanceof org.bukkit.entity.Arrow)) {
+            return;
+        }
+
+        // Solo procesar si es un Ghast
+        if (!(e.getEntity() instanceof org.bukkit.entity.Ghast)) {
+            return;
+        }
+
+        org.bukkit.entity.Ghast ghast = (org.bukkit.entity.Ghast) e.getEntity();
+        org.bukkit.NamespacedKey enderGhastKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                "ender_ghast");
+
+        // Verificar si es un Ender Ghast
+        if (ghast.getPersistentDataContainer().has(enderGhastKey,
+                org.bukkit.persistence.PersistentDataType.BYTE)) {
+            // Teletransportar 20% de las veces
+            Random random = new Random();
+            if (random.nextInt(100) < 20) {
+                Location teleportLoc = ghast.getLocation().add(
+                        (random.nextDouble() - 0.5) * 30,
+                        random.nextDouble() * 15,
+                        (random.nextDouble() - 0.5) * 30);
+                ghast.teleport(teleportLoc);
+                ghast.getWorld().playSound(ghast.getLocation(), org.bukkit.Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onGhastFireballDamage(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        // Solo procesar daño por Fireball
+        if (!(e.getDamager() instanceof org.bukkit.entity.Fireball)) {
+            return;
+        }
+
+        org.bukkit.entity.Fireball fireball = (org.bukkit.entity.Fireball) e.getDamager();
+
+        // Verificar si fue lanzada por un Ghast especial
+        if (fireball.getShooter() instanceof org.bukkit.entity.Ghast) {
+            org.bukkit.entity.Ghast ghast = (org.bukkit.entity.Ghast) fireball.getShooter();
+            org.bukkit.NamespacedKey explosionKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "explosion_power");
+
+            // Si tiene ExplosionPower configurado, multiplicar el daño
+            if (ghast.getPersistentDataContainer().has(explosionKey,
+                    org.bukkit.persistence.PersistentDataType.INTEGER)) {
+                int explosionPower = ghast.getPersistentDataContainer().get(explosionKey,
+                        org.bukkit.persistence.PersistentDataType.INTEGER);
+
+                // Multiplicar el daño base según el ExplosionPower
+                // ExplosionPower 8-10 = multiplicador de 1.6-2x
+                double multiplier = 1.6 + (explosionPower / 2.0);
+                e.setDamage(e.getDamage() * multiplier);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEnderGhastFireball(org.bukkit.event.entity.ProjectileLaunchEvent e) {
+        if (!(e.getEntity() instanceof org.bukkit.entity.Fireball)) {
+            return;
+        }
+
+        org.bukkit.entity.Fireball fireball = (org.bukkit.entity.Fireball) e.getEntity();
+
+        // Verificar si fue lanzada por un Ghast
+        if (fireball.getShooter() instanceof org.bukkit.entity.Ghast) {
+            org.bukkit.entity.Ghast ghast = (org.bukkit.entity.Ghast) fireball.getShooter();
+            org.bukkit.NamespacedKey explosionKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "explosion_power");
+
+            // Verificar si el Ghast tiene ExplosionPower configurado
+            if (ghast.getPersistentDataContainer().has(explosionKey,
+                    org.bukkit.persistence.PersistentDataType.INTEGER)) {
+                int explosionPower = ghast.getPersistentDataContainer().get(explosionKey,
+                        org.bukkit.persistence.PersistentDataType.INTEGER);
+
+                // Usar NMS/Reflexión para establecer el ExplosionPower
+                try {
+                    // Obtener el handle de la fireball (NMS)
+                    Object nmsFireball = fireball.getClass().getMethod("getHandle").invoke(fireball);
+
+                    // Establecer el explosionPower usando reflexión
+                    nmsFireball.getClass().getField("explosionPower").setInt(nmsFireball, explosionPower);
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
         }
     }
 
@@ -711,5 +987,117 @@ public class PlayerListener implements Listener {
         org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "infernal_armor");
 
         return meta.getPersistentDataContainer().has(key, org.bukkit.persistence.PersistentDataType.BYTE);
+    }
+
+    @EventHandler
+    public void onShulkerNearby(org.bukkit.event.player.PlayerMoveEvent e) {
+        // Solo ejecutar cada cierto tiempo para no sobrecargar
+        if (e.getPlayer().getTicksLived() % 20 != 0) { // Cada segundo
+            return;
+        }
+
+        Player player = e.getPlayer();
+        int currentDay = HMPlugin.getInstance().getDifficultyManager().getCurrentDay();
+
+        // Solo en día 30+
+        if (currentDay < 30) {
+            return;
+        }
+
+        // Buscar Shulkers cercanos (10 bloques)
+        for (org.bukkit.entity.Entity entity : player.getNearbyEntities(10, 10, 10)) {
+            if (entity instanceof org.bukkit.entity.Shulker) {
+                org.bukkit.entity.Shulker shulker = (org.bukkit.entity.Shulker) entity;
+                org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                        "explosive_shulker");
+                org.bukkit.NamespacedKey processedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                        "processed_shulker");
+
+                // Si no ha sido marcado como explosivo ni procesado
+                if (!shulker.getPersistentDataContainer().has(explosiveKey,
+                        org.bukkit.persistence.PersistentDataType.BYTE)
+                        && !shulker.getPersistentDataContainer().has(processedKey,
+                                org.bukkit.persistence.PersistentDataType.BYTE)) {
+
+                    // Marcar como procesado para no repetir
+                    shulker.getPersistentDataContainer().set(processedKey,
+                            org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+                    // Aplicar efectos
+                    HMPlugin.getInstance().getDifficultyManager().applyMobEffects(shulker);
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEnderCreeperProjectileNear(org.bukkit.event.entity.ProjectileLaunchEvent e) {
+        // Solo procesar flechas
+        if (!(e.getEntity() instanceof org.bukkit.entity.Arrow)) {
+            return;
+        }
+
+        org.bukkit.entity.Arrow arrow = (org.bukkit.entity.Arrow) e.getEntity();
+
+        // Programar verificación cada tick
+        new org.bukkit.scheduler.BukkitRunnable() {
+            @Override
+            public void run() {
+                // Si la flecha ya no existe o está en el suelo, cancelar
+                if (!arrow.isValid() || arrow.isInBlock() || arrow.isDead()) {
+                    this.cancel();
+                    return;
+                }
+
+                // Buscar Ender Creepers cercanos (3 bloques)
+                for (org.bukkit.entity.Entity nearby : arrow.getNearbyEntities(3, 3, 3)) {
+                    if (nearby instanceof org.bukkit.entity.Creeper) {
+                        org.bukkit.entity.Creeper creeper = (org.bukkit.entity.Creeper) nearby;
+                        org.bukkit.NamespacedKey enderCreeperKey = new org.bukkit.NamespacedKey(
+                                HMPlugin.getInstance(), "ender_creeper");
+
+                        if (creeper.getPersistentDataContainer().has(enderCreeperKey,
+                                org.bukkit.persistence.PersistentDataType.BYTE)) {
+                            // Teletransportar a un lugar seguro
+                            Random random = new Random();
+                            Location currentLoc = creeper.getLocation();
+                            Location teleportLoc = null;
+
+                            // Intentar hasta 5 veces encontrar un lugar seguro
+                            for (int i = 0; i < 5; i++) {
+                                double offsetX = (random.nextDouble() - 0.5) * 16;
+                                double offsetZ = (random.nextDouble() - 0.5) * 16;
+
+                                Location testLoc = currentLoc.clone().add(offsetX, 0, offsetZ);
+
+                                // Buscar el bloque sólido más cercano abajo
+                                testLoc.setY(currentLoc.getY());
+                                while (testLoc.getY() > currentLoc.getWorld().getMinHeight()
+                                        && testLoc.getBlock().getType().isAir()) {
+                                    testLoc.subtract(0, 1, 0);
+                                }
+
+                                // Verificar que hay un bloque sólido y espacio arriba
+                                if (!testLoc.getBlock().getType().isAir()
+                                        && testLoc.clone().add(0, 1, 0).getBlock().getType().isAir()
+                                        && testLoc.clone().add(0, 2, 0).getBlock().getType().isAir()) {
+                                    teleportLoc = testLoc.add(0, 1, 0);
+                                    break;
+                                }
+                            }
+
+                            // Si se encontró un lugar seguro, teletransportar
+                            if (teleportLoc != null) {
+                                creeper.teleport(teleportLoc);
+                                creeper.getWorld().playSound(creeper.getLocation(),
+                                        org.bukkit.Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                            }
+
+                            this.cancel();
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(HMPlugin.getInstance(), 0L, 1L);
     }
 }

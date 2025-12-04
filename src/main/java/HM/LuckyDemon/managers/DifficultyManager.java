@@ -8,6 +8,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
 import java.io.File;
 import java.io.IOException;
@@ -293,9 +295,13 @@ public class DifficultyManager {
         // Aplicar efectos del día 25
         applyDay25Effects(entity);
 
-        // DÍA 30: Creepers eléctricos
+        // DÍA 30: Creepers eléctricos (solo fuera del End)
         if (entity instanceof org.bukkit.entity.Creeper) {
-            makeCreperCharged((org.bukkit.entity.Creeper) entity);
+            org.bukkit.entity.Creeper creeper = (org.bukkit.entity.Creeper) entity;
+            // Solo hacer eléctrico si NO está en el End (los del End son Ender Creepers)
+            if (creeper.getWorld().getEnvironment() != org.bukkit.World.Environment.THE_END) {
+                makeCreperCharged(creeper);
+            }
         }
 
         // DÍA 30: Pillagers invisibles con ballestas de Quick Charge X
@@ -321,6 +327,46 @@ public class DifficultyManager {
         // DÍA 30: Silverfish con 5 efectos aleatorios
         if (entity instanceof org.bukkit.entity.Silverfish) {
             applySilverfishEffects((org.bukkit.entity.Silverfish) entity);
+        }
+
+        // SHULKERS EXPLOSIVOS
+        if (entity instanceof org.bukkit.entity.Shulker) {
+            applyExplosiveShulkerEffects((org.bukkit.entity.Shulker) entity);
+        }
+
+        // ENDER CREEPER - Solo en el End
+        if (entity instanceof org.bukkit.entity.Creeper) {
+            org.bukkit.entity.Creeper creeper = (org.bukkit.entity.Creeper) entity;
+            // Solo aplicar efectos especiales si está en el End
+            if (creeper.getWorld().getEnvironment() == org.bukkit.World.Environment.THE_END) {
+                applyEnderCreeperEffects(creeper);
+            }
+            // Si no está en el End, solo hacerlo eléctrico (ya se hace en línea 298)
+        }
+
+        // ENDER GHAST - Solo en el End (en el Nether siguen siendo Ghast Demoníacos del
+        // día 25)
+        if (entity instanceof org.bukkit.entity.Ghast) {
+            org.bukkit.entity.Ghast ghast = (org.bukkit.entity.Ghast) entity;
+            // Solo aplicar efectos de Ender Ghast si está en el End
+            if (ghast.getWorld().getEnvironment() == org.bukkit.World.Environment.THE_END) {
+                applyEnderGhastEffects(ghast);
+            }
+            // Si está en el Nether, ya tiene efectos de Ghast Demoníaco (día 25)
+        }
+
+        // DÍA 30: Todos los esqueletos tienen clase aleatoria
+        if (entity instanceof org.bukkit.entity.Skeleton || entity instanceof org.bukkit.entity.WitherSkeleton) {
+            // Verificar si ya tiene una clase asignada (para no sobrescribir jinetes de
+            // arañas)
+            org.bukkit.NamespacedKey classKey = new org.bukkit.NamespacedKey(plugin, "skeleton_class");
+            if (!entity.getPersistentDataContainer().has(classKey, org.bukkit.persistence.PersistentDataType.INTEGER)) {
+                // Asignar clase aleatoria (1-5)
+                int skeletonClass = random.nextInt(5) + 1;
+                entity.getPersistentDataContainer().set(classKey, org.bukkit.persistence.PersistentDataType.INTEGER,
+                        skeletonClass);
+                equipSkeletonByClass(entity, skeletonClass);
+            }
         }
 
         // Aplicar nombres especiales a mobs especiales
@@ -515,6 +561,10 @@ public class DifficultyManager {
         }
 
         spider.addPassenger(skeleton);
+        // Marcar que ya tiene clase asignada
+        org.bukkit.NamespacedKey classKey = new org.bukkit.NamespacedKey(plugin, "skeleton_class");
+        skeleton.getPersistentDataContainer().set(classKey, org.bukkit.persistence.PersistentDataType.INTEGER,
+                skeletonClass);
         equipSkeletonByClass(skeleton, skeletonClass);
     }
 
@@ -959,6 +1009,12 @@ public class DifficultyManager {
                 new org.bukkit.NamespacedKey(plugin, "demonic_ghast"),
                 org.bukkit.persistence.PersistentDataType.BYTE,
                 (byte) 1);
+
+        // Asignar ExplosionPower aleatorio (3, 4 o 5)
+        int explosionPower = 3 + new java.util.Random().nextInt(3); // 3, 4 o 5
+        org.bukkit.NamespacedKey explosionKey = new org.bukkit.NamespacedKey(plugin, "explosion_power");
+        ghast.getPersistentDataContainer().set(explosionKey, org.bukkit.persistence.PersistentDataType.INTEGER,
+                explosionPower);
     }
 
     // ========== REGLAS SEGÚN DÍA ==========
@@ -1090,5 +1146,64 @@ public class DifficultyManager {
             int amplifier = getAmplifierForEffect(effectType);
             silverfish.addPotionEffect(new PotionEffect(effectType, duration, amplifier));
         }
+    }
+
+    /**
+     * SHULKERS EXPLOSIVOS - 20% drop Shulker Shell
+     */
+    private void applyExplosiveShulkerEffects(org.bukkit.entity.Shulker shulker) {
+        // Marcar como explosivo
+        org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(plugin, "explosive_shulker");
+        shulker.getPersistentDataContainer().set(explosiveKey, org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
+
+        // Nombre especial
+        shulker.customName(net.kyori.adventure.text.Component.text("Shulker Explosivo")
+                .color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        shulker.setCustomNameVisible(false);
+    }
+
+    /**
+     * ENDER GHAST - Spawn en el End, explota al morir
+     */
+    private void applyEnderGhastEffects(org.bukkit.entity.Ghast ghast) {
+        // Marcar como Ender Ghast
+        org.bukkit.NamespacedKey enderGhastKey = new org.bukkit.NamespacedKey(plugin, "ender_ghast");
+        ghast.getPersistentDataContainer().set(enderGhastKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+        // Nombre especial con nametag visible
+        ghast.customName(net.kyori.adventure.text.Component.text("Ender Ghast")
+                .color(net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        ghast.setCustomNameVisible(false);
+
+        // Asignar ExplosionPower aleatorio (3, 4 o 5)
+        int explosionPower = 3 + new java.util.Random().nextInt(3); // 3, 4 o 5
+        org.bukkit.NamespacedKey explosionKey = new org.bukkit.NamespacedKey(plugin, "explosion_power");
+        ghast.getPersistentDataContainer().set(explosionKey, org.bukkit.persistence.PersistentDataType.INTEGER,
+                explosionPower);
+    }
+
+    /**
+     * ENDER CREEPER - Eléctrico e Invisible, se teletransporta al recibir flechas
+     */
+    private void applyEnderCreeperEffects(org.bukkit.entity.Creeper creeper) {
+        // Marcar como Ender Creeper
+        org.bukkit.NamespacedKey enderCreeperKey = new org.bukkit.NamespacedKey(plugin, "ender_creeper");
+        creeper.getPersistentDataContainer().set(enderCreeperKey, org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
+
+        // Hacer eléctrico
+        creeper.setPowered(true);
+
+        // Hacer invisible
+        creeper.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
+
+        // Nombre especial con nametag visible
+        creeper.customName(net.kyori.adventure.text.Component.text("Ender Creeper")
+                .color(net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        creeper.setCustomNameVisible(false);
     }
 }
