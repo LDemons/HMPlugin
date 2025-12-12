@@ -3,6 +3,7 @@ package HM.LuckyDemon;
 import HM.LuckyDemon.events.BastionLootListener;
 import HM.LuckyDemon.managers.DifficultyManager;
 import HM.LuckyDemon.utils.MessageUtils;
+import HM.LuckyDemon.utils.WebhookUtils;
 import HM.LuckyDemon.events.AncientDebrisListener;
 import HM.LuckyDemon.managers.ScoreboardManager;
 import HM.LuckyDemon.tasks.HeartbeatTask;
@@ -88,10 +89,16 @@ public class HMPlugin extends JavaPlugin {
             MessageUtils.send(this.getServer().getConsoleSender(),
                     "<green>KeepInventory activado (Día " + currentDay + " >= 20)");
         }
+
+        // Notificar webhook que el servidor está abierto
+        WebhookUtils.sendServerStatus("abierto");
     }
 
     @Override
     public void onDisable() {
+        // Notificar webhook que el servidor está cerrado (de forma síncrona)
+        WebhookUtils.sendServerStatus("cerrado", true);
+
         MessageUtils.send(this.getServer().getConsoleSender(), "<red>Permadeath desactivado.");
 
         // Desactivar scoreboard

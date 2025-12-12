@@ -98,4 +98,51 @@ public class WebhookUtils {
             }
         });
     }
+
+    public static void sendServerStatus(String status) {
+        sendServerStatus(status, false);
+    }
+
+    public static void sendServerStatus(String status, boolean synchronous) {
+        if (synchronous) {
+            // Ejecución síncrona para cuando el plugin se está deshabilitando
+            sendServerStatusSync(status);
+        } else {
+            // Ejecución asíncrona normal
+            Bukkit.getScheduler().runTaskAsynchronously(HMPlugin.getInstance(), () -> {
+                sendServerStatusSync(status);
+            });
+        }
+    }
+
+    private static void sendServerStatusSync(String status) {
+        try {
+            String webhookUrl = HMPlugin.getInstance().getConfig().getString("server_status_webhook", "https://n8n.warevision.net/webhook-test/a3062da4-c838-48f8-b355-2a82065a798f");
+            
+            URL url = new URL(webhookUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            JsonObject json = new JsonObject();
+            json.addProperty("mensaje", status);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
+                Bukkit.getLogger().info("Estado del servidor enviado: " + status);
+            } else {
+                Bukkit.getLogger().warning("Error al enviar estado del servidor: " + responseCode);
+            }
+
+            conn.disconnect();
+        } catch (Exception e) {
+            Bukkit.getLogger().severe("Error al enviar estado del servidor: " + e.getMessage());
+        }
+    }
 }

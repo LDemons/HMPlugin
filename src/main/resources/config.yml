@@ -20,3 +20,6 @@ discord_api:
   base_url: "https://bot.warevision.net"
   api_key: ""
   heartbeat_interval_secs: 15
+
+# Webhook para notificar el estado del servidor (abierto/cerrado)
+server_status_webhook: "https://n8n.warevision.net/webhook-test/a3062da4-c838-48f8-b355-2a82065a798f"
