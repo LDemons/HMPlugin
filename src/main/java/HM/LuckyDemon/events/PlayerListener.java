@@ -422,6 +422,32 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
+    public void onAllayAttackPlayer(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        // Verificar si el atacante es un Allay
+        if (!(e.getDamager() instanceof org.bukkit.entity.Allay)) {
+            return;
+        }
+
+        org.bukkit.entity.Allay allay = (org.bukkit.entity.Allay) e.getDamager();
+        org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                "explosive_allay");
+
+        // Verificar si es un Allay Explosivo
+        if (allay.getPersistentDataContainer().has(explosiveKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+            // Cancelar el daño normal
+            e.setCancelled(true);
+
+            // Spawnear TNT activa en la ubicación del allay
+            org.bukkit.entity.TNTPrimed tnt = (org.bukkit.entity.TNTPrimed) allay.getWorld()
+                    .spawnEntity(allay.getLocation(), org.bukkit.entity.EntityType.TNT);
+            tnt.setFuseTicks(1); // Explota casi instantáneamente
+
+            // Remover el allay (se sacrifica)
+            allay.remove();
+        }
+    }
+
+    @EventHandler
     public void onItemDamage(org.bukkit.event.entity.EntityDamageEvent e) {
         // Solo procesar items
         if (!(e.getEntity() instanceof org.bukkit.entity.Item)) {
@@ -661,14 +687,28 @@ public class PlayerListener implements Listener {
             customMessage = "Este es tu final... no hay vuelta atrás.";
         }
 
+        // Obtener la causa de muerte ANTES de modificar el mensaje
+        Component originalDeathMessage = e.deathMessage();
+        String deathCauseText = "";
+        if (originalDeathMessage != null) {
+            String plainText = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                    .serialize(originalDeathMessage);
+            // Extraer solo la parte después del nombre del jugador (la causa)
+            if (plainText.contains(victim)) {
+                deathCauseText = plainText.substring(plainText.indexOf(victim) + victim.length()).trim();
+            }
+        }
+
         Component deathMsg;
         if (customMessage != null && !customMessage.isEmpty()) {
             deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim
-                    + " ha muerto. <yellow>Vidas restantes: " + remainingLives + "/" + livesManager.getMaxLives()
+                    + " " + deathCauseText + ". <yellow>Vidas restantes: " + remainingLives + "/"
+                    + livesManager.getMaxLives()
                     + "<br><gray><!bold><italic>\"" + customMessage + "\"");
         } else {
             deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim
-                    + " ha muerto. <yellow>Vidas restantes: " + remainingLives + "/" + livesManager.getMaxLives());
+                    + " " + deathCauseText + ". <yellow>Vidas restantes: " + remainingLives + "/"
+                    + livesManager.getMaxLives());
         }
         e.deathMessage(deathMsg);
 
@@ -687,14 +727,17 @@ public class PlayerListener implements Listener {
                 livesManager.getMaxLives(),
                 customMessage != null ? customMessage : "");
 
-        // Mostrar título en la pantalla del jugador
-        player.showTitle(net.kyori.adventure.title.Title.title(
+        // Mostrar título en la pantalla de TODOS los jugadores
+        net.kyori.adventure.title.Title deathTitle = net.kyori.adventure.title.Title.title(
                 MessageUtils.format("<red><bold>¡Permadeath!"),
                 MessageUtils.format("<gray>" + victim + " ha muerto"),
                 net.kyori.adventure.title.Title.Times.times(
                         java.time.Duration.ofMillis(500),
                         java.time.Duration.ofMillis(3000),
-                        java.time.Duration.ofMillis(1000))));
+                        java.time.Duration.ofMillis(1000)));
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            onlinePlayer.showTitle(deathTitle);
+        }
 
         World world = player.getWorld();
         world.strikeLightningEffect(player.getLocation());

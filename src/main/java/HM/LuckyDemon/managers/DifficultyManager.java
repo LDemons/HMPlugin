@@ -369,6 +369,17 @@ public class DifficultyManager {
             }
         }
 
+        // DÍA 30: Piglins se transforman en Hoglins
+        if (entity instanceof org.bukkit.entity.Piglin) {
+            transformPiglinToHoglin((org.bukkit.entity.Piglin) entity);
+            return;
+        }
+
+        // DÍA 30: Allays invisibles con TNT que explotan
+        if (entity instanceof org.bukkit.entity.Allay) {
+            applyExplosiveAllayEffects((org.bukkit.entity.Allay) entity);
+        }
+
         // Aplicar nombres especiales a mobs especiales
         applySpecialMobNames(entity);
     }
@@ -406,6 +417,79 @@ public class DifficultyManager {
                 new org.bukkit.NamespacedKey(plugin, "skip_effects"),
                 org.bukkit.persistence.PersistentDataType.BYTE,
                 (byte) 1);
+    }
+
+    /**
+     * DÍA 30: Transformar Piglin a Hoglin
+     */
+    private void transformPiglinToHoglin(org.bukkit.entity.Piglin piglin) {
+        org.bukkit.Location loc = piglin.getLocation();
+        org.bukkit.World world = piglin.getWorld();
+
+        // Remover el piglin INMEDIATAMENTE
+        piglin.remove();
+
+        // Spawnear hoglin INMEDIATAMENTE (sin delay)
+        org.bukkit.entity.Hoglin hoglin = (org.bukkit.entity.Hoglin) world.spawnEntity(
+                loc,
+                org.bukkit.entity.EntityType.HOGLIN);
+
+        // MARCAR INMEDIATAMENTE como transformado
+        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "transformed_mob");
+        hoglin.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+        // Evitar que se convierta en Zoglin
+        hoglin.setImmuneToZombification(true);
+
+        // Nombre especial (sin nametag visible)
+        hoglin.customName(net.kyori.adventure.text.Component.text("Hoglin Salvaje")
+                .color(net.kyori.adventure.text.format.NamedTextColor.DARK_RED)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        hoglin.setCustomNameVisible(false);
+
+        // Marcar también con un segundo marcador para evitar re-procesamiento
+        hoglin.getPersistentDataContainer().set(
+                new org.bukkit.NamespacedKey(plugin, "skip_effects"),
+                org.bukkit.persistence.PersistentDataType.BYTE,
+                (byte) 1);
+    }
+
+    /**
+     * DÍA 30: Allay explosivo - Invisible, Speed I, TNT en mano, explota al morir o
+     * al golpear
+     */
+    private void applyExplosiveAllayEffects(org.bukkit.entity.Allay allay) {
+        // Marcar como Allay explosivo
+        org.bukkit.NamespacedKey explosiveKey = new org.bukkit.NamespacedKey(plugin, "explosive_allay");
+        allay.getPersistentDataContainer().set(explosiveKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+
+        // Invisibilidad permanente
+        allay.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
+
+        // Speed II (amplifier = 1)
+        allay.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+
+        // Hacer más grande (escala 2.0 = tamaño de araña aproximadamente)
+        org.bukkit.attribute.AttributeInstance scaleAttr = allay.getAttribute(org.bukkit.attribute.Attribute.SCALE);
+        if (scaleAttr != null) {
+            scaleAttr.setBaseValue(2.0);
+        }
+
+        // TNT en la mano
+        org.bukkit.inventory.EntityEquipment equipment = allay.getEquipment();
+        if (equipment != null) {
+            equipment.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TNT));
+            equipment.setItemInMainHandDropChance(0.0f);
+        }
+
+        // Nombre especial (sin nametag visible porque es invisible)
+        allay.customName(net.kyori.adventure.text.Component.text("Allay Explosivo")
+                .color(net.kyori.adventure.text.format.NamedTextColor.RED)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        allay.setCustomNameVisible(false);
+
+        // Hacer agresivo usando el sistema ya existente
+        makeAggressive((org.bukkit.entity.Mob) allay, 0.0); // 0 daño porque explota
     }
 
     /**
@@ -956,7 +1040,7 @@ public class DifficultyManager {
         slime.customName(net.kyori.adventure.text.Component.text("Giga Slime")
                 .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
                 .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-        slime.setCustomNameVisible(true);
+        slime.setCustomNameVisible(false);
 
         // Tamaño 15
         slime.setSize(15);
@@ -982,7 +1066,7 @@ public class DifficultyManager {
         magmaCube.customName(net.kyori.adventure.text.Component.text("Giga Magma Cube")
                 .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
                 .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-        magmaCube.setCustomNameVisible(true);
+        magmaCube.setCustomNameVisible(false);
 
         // Tamaño 16
         magmaCube.setSize(16);
@@ -1002,7 +1086,7 @@ public class DifficultyManager {
         ghast.customName(net.kyori.adventure.text.Component.text("Ghast Demoníaco")
                 .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)
                 .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-        ghast.setCustomNameVisible(true);
+        ghast.setCustomNameVisible(false);
 
         // Marcar que es un Ghast Demoníaco para las bolas de fuego
         ghast.getPersistentDataContainer().set(
