@@ -66,6 +66,9 @@ public class HMPlugin extends JavaPlugin {
         // Registrar el listener de Bedrock (Día 30)
         getServer().getPluginManager().registerEvents(new BedrockListener(this), this);
 
+        // DÍA 40+: Slots bloqueados y crafteo de antorchas
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40InventoryListener(), this);
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40CraftListener(), this);
 
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
@@ -73,8 +76,8 @@ public class HMPlugin extends JavaPlugin {
         // --- NUEVA TAREA: HEARTBEAT DE DISCORD ---
         // 20 ticks = 1 segundo. Leer la configuración del intervalo.
         int intervalSecs = getConfig().getInt("discord_api.heartbeat_interval_secs", 15);
-        long intervalTicks = intervalSecs * 20L; 
-        
+        long intervalTicks = intervalSecs * 20L;
+
         // La tarea comienza inmediatamente (0L) y se repite cada X ticks
         new HeartbeatTask().runTaskTimer(this, 0L, intervalTicks);
 

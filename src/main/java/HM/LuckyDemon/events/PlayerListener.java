@@ -146,8 +146,27 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPvP(EntityDamageByEntityEvent e) {
-        // Cancelar PvP entre jugadores
+        // DÍA 40+: Fuego amigo habilitado (PvP permitido)
+        int currentDay = HM.LuckyDemon.managers.GameManager.getInstance().getDay();
+
         if (e.getDamager() instanceof Player && e.getEntity() instanceof Player) {
+            if (currentDay >= 40) {
+                // PvP habilitado en día 40+
+                Player attacker = (Player) e.getDamager();
+                Player victim = (Player) e.getEntity();
+
+                // Mostrar mensaje la primera vez que atacan
+                if (!pvpMessageShown.contains(attacker.getUniqueId())) {
+                    MessageUtils.send(attacker,
+                            "<red>⚔ <gold>¡FUEGO AMIGO HABILITADO! <gray>Ten cuidado con tus ataques...");
+                    pvpMessageShown.add(attacker.getUniqueId());
+                }
+
+                // NO cancelar - permitir el daño
+                return;
+            }
+
+            // Antes del día 40: Cancelar PvP
             e.setCancelled(true);
             Player attacker = (Player) e.getDamager();
 

@@ -1152,6 +1152,10 @@ public class DifficultyManager {
         return currentDay >= 30;
     }
 
+    public boolean isDay40OrLater() {
+        return currentDay >= 40;
+    }
+
     /**
      * Calcula las horas de Death Train según el sistema de reset cada 25 días
      * Día 25 = 1hr, Día 26 = 2hr, ..., Día 49 = 24hr, Día 50 = 1hr, etc.

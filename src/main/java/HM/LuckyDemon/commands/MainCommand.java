@@ -363,13 +363,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            // Verificar que el día esté entre 25 y 29
-            int currentDay = GameManager.getInstance().getDay();
-            if (currentDay < 25 || currentDay > 29) {
-                MessageUtils.send(player, "<red>Este comando solo está disponible del día 25 al 29.");
-                MessageUtils.send(player, "<gray>Día actual: " + currentDay);
-                return true;
-            }
+            // SIN RESTRICCIÓN DE DÍA - Comando OP puede usarse siempre
 
             // Crear las 4 piezas de armadura de netherite especial
             org.bukkit.inventory.ItemStack helmet = createSpecialNetheriteArmor(org.bukkit.Material.NETHERITE_HELMET,
