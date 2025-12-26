@@ -853,10 +853,21 @@ public class PlayerListener implements Listener {
             AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
 
             if (attribute != null) {
-                double maxHealth = attribute.getBaseValue();
+                double currentMax = attribute.getValue(); // getValue incluye modificadores
 
-                if (maxHealth < 40.0) {
-                    attribute.setBaseValue(maxHealth + 4.0);
+                if (currentMax < 40.0) {
+                    // Crear modificador único para este jugador
+                    java.util.UUID modifierUUID = java.util.UUID.nameUUIDFromBytes(
+                            ("hyper_apple_" + p.getUniqueId().toString() + "_" + System.currentTimeMillis())
+                                    .getBytes());
+
+                    org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
+                            modifierUUID,
+                            "hmplugin.hyper_apple",
+                            4.0, // Agregar 4 puntos (2 corazones)
+                            org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER);
+                    attribute.addModifier(modifier);
+
                     p.sendMessage(MessageUtils.format("<green>¡Has ganado contenedores de vida extra!"));
                 } else {
                     p.sendMessage(MessageUtils.format("<red>Ya has alcanzado el límite de vida extra."));
@@ -866,11 +877,6 @@ public class PlayerListener implements Listener {
             p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 30, 2));
             p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 20 * 120, 2));
 
-        } else if ("super".equals(gapType)) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 15, 1));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 20 * 300, 0));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 20 * 300, 0));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 20 * 120, 1));
         }
     }
 

@@ -349,7 +349,13 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 maxHealth.setBaseValue(20.0);
                 player.setHealth(20.0);
 
+                // Remover tag de vida reducida día 40
+                org.bukkit.NamespacedKey healthReducedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                        "day40_health_reduced");
+                player.getPersistentDataContainer().remove(healthReducedKey);
+
                 MessageUtils.send(player, "<green>✓ Vida reseteada a 10 corazones (20 HP)");
+                MessageUtils.send(player, "<yellow>Tag de día 40 removido. Reconéctate para probar la reducción.");
                 player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
             } else {
                 MessageUtils.send(player, "<red>Error al resetear la vida.");

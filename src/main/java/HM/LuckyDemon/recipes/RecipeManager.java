@@ -16,6 +16,7 @@ public class RecipeManager {
                 registerLifeOrb();
                 registerGaps();
                 registerSkullToNotch(); // DÍA 20
+                registerChorusToDragonBreath(); // DÍA 40
         }
 
         private static void registerInfernalArmor() {
@@ -159,6 +160,25 @@ public class RecipeManager {
                 }
 
                 // Registrar solo si no existe (para evitar errores al recargar)
+                if (HMPlugin.getInstance().getServer().getRecipe(key) == null) {
+                        HMPlugin.getInstance().getServer().addRecipe(recipe);
+                }
+        }
+
+        /**
+         * DÍA 40: Chorus Flower → Dragon's Breath
+         */
+        private static void registerChorusToDragonBreath() {
+                NamespacedKey key = new NamespacedKey(HMPlugin.getInstance(), "chorus_to_dragon_breath");
+                ShapedRecipe recipe = new ShapedRecipe(key, new ItemStack(Material.DRAGON_BREATH));
+
+                recipe.shape(
+                                "CCC",
+                                "CCC",
+                                "CCC");
+
+                recipe.setIngredient('C', Material.CHORUS_FLOWER);
+
                 if (HMPlugin.getInstance().getServer().getRecipe(key) == null) {
                         HMPlugin.getInstance().getServer().addRecipe(recipe);
                 }

@@ -70,6 +70,9 @@ public class HMPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40InventoryListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40CraftListener(), this);
 
+        // DÍA 40+: Modificaciones de loot
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40LootListener(), this);
+
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
 
@@ -77,6 +80,9 @@ public class HMPlugin extends JavaPlugin {
         // 20 ticks = 1 segundo. Leer la configuración del intervalo.
         int intervalSecs = getConfig().getInt("discord_api.heartbeat_interval_secs", 15);
         long intervalTicks = intervalSecs * 20L;
+
+        // DÍA 40+: Mobs en Mushroom Islands (cada 10 segundos para pruebas)
+        new HM.LuckyDemon.tasks.MushroomMobTask().runTaskTimer(this, 20L * 10, 20L * 10);
 
         // La tarea comienza inmediatamente (0L) y se repite cada X ticks
         new HeartbeatTask().runTaskTimer(this, 0L, intervalTicks);

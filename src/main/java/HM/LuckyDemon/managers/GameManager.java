@@ -149,9 +149,62 @@ public class GameManager {
             }
         }
 
+        // Si baja de día 20, desactivar KeepInventory
+        if (day < 20 && previousDay >= 20) {
+            for (World world : Bukkit.getWorlds()) {
+                world.setGameRule(GameRule.KEEP_INVENTORY, false);
+            }
+        }
+
         // DÍA 40: Aplicar slots bloqueados (sin anuncio)
         if (day >= 40 && previousDay < 40) {
             HM.LuckyDemon.events.Day40InventoryListener.applyToAllPlayers();
+        }
+
+        // DÍA 40+: Reducir vida a todos los jugadores conectados (solo una vez)
+        if (day >= 40) {
+            org.bukkit.NamespacedKey healthReducedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
+                    "day40_health_reduced");
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (!p.getPersistentDataContainer().has(healthReducedKey,
+                        org.bukkit.persistence.PersistentDataType.BYTE)) {
+                    org.bukkit.attribute.AttributeInstance maxHealth = p
+                            .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                    if (maxHealth != null) {
+                        double currentMax = maxHealth.getBaseValue();
+                        // Reducir 8 puntos (4 corazones), mínimo 12 (6 corazones)
+                        double newMax = Math.max(12.0, currentMax - 8.0);
+                        maxHealth.setBaseValue(newMax);
+                        if (p.getHealth() > newMax) {
+                            p.setHealth(newMax);
+                        }
+                        // Marcar como reducido
+                        p.getPersistentDataContainer().set(healthReducedKey,
+                                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                        Bukkit.getLogger().info(
+                                "[HMPlugin] Vida reducida para " + p.getName() + ": " + currentMax + " -> " + newMax);
+                    }
+                }
+            }
+        }
+
+        // Si baja de día 40, remover slots bloqueados
+        if (day < 40 && previousDay >= 40) {
+            HM.LuckyDemon.events.Day40InventoryListener.removeFromAllPlayers();
+        }
+
+        // DÍA 40: Desactivar generación de estructuras (requiere reinicio)
+        if (day >= 40 && previousDay < 40) {
+            setServerProperty("generate-structures", "false");
+            Bukkit.broadcast(MessageUtils.format("<red>⚠ La generación de estructuras ha sido desactivada."));
+            Bukkit.broadcast(MessageUtils.format("<yellow>Este cambio aplicará al reiniciar el servidor."));
+        }
+
+        // Si baja de día 40, reactivar generación de estructuras
+        if (day < 40 && previousDay >= 40) {
+            setServerProperty("generate-structures", "true");
+            Bukkit.broadcast(MessageUtils.format("<green>✓ La generación de estructuras ha sido reactivada."));
+            Bukkit.broadcast(MessageUtils.format("<yellow>Este cambio aplicará al reiniciar el servidor."));
         }
     }
 
@@ -195,5 +248,34 @@ public class GameManager {
                 "<gradient:red:gold><bold>PERMADEATH</gradient> <gray>» <yellow>Día " + currentDay + weatherStatus);
 
         player.sendActionBar(actionBar);
+    }
+
+    /**
+     * Modificar una propiedad en server.properties
+     * NOTA: El cambio solo aplica al reiniciar el servidor
+     */
+    public static void setServerProperty(String key, String value) {
+        try {
+            java.io.File serverProperties = new java.io.File("server.properties");
+            java.util.Properties props = new java.util.Properties();
+
+            // Leer propiedades actuales
+            try (java.io.FileInputStream in = new java.io.FileInputStream(serverProperties)) {
+                props.load(in);
+            }
+
+            // Modificar la propiedad
+            props.setProperty(key, value);
+
+            // Guardar
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(serverProperties)) {
+                props.store(out, "Minecraft server properties");
+            }
+
+            Bukkit.getLogger().info("[HMPlugin] server.properties modificado: " + key + "=" + value);
+
+        } catch (Exception e) {
+            Bukkit.getLogger().severe("[HMPlugin] Error modificando server.properties: " + e.getMessage());
+        }
     }
 }

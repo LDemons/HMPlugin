@@ -121,6 +121,35 @@ public class Day40InventoryListener implements Listener {
                 updateLockedSlots(player);
             }, 20L);
         }
+
+        // Reducir vida máxima en 4 contenedores (8 puntos) - día 40+
+        if (GameManager.getInstance().getDay() >= 40) {
+            org.bukkit.attribute.AttributeInstance maxHealth = player
+                    .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+
+            if (maxHealth != null) {
+                // UUID único del modificador
+                java.util.UUID modifierUUID = java.util.UUID.fromString("d40a0000-0000-0000-0000-000000000001");
+
+                // Verificar si ya tiene el modificador
+                boolean hasModifier = maxHealth.getModifiers().stream()
+                        .anyMatch(mod -> mod.getUniqueId().equals(modifierUUID));
+
+                if (!hasModifier) {
+                    // Agregar modificador que resta 8 puntos
+                    org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
+                            modifierUUID,
+                            "hmplugin.day40.health_reduction",
+                            -8.0,
+                            org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER);
+                    maxHealth.addModifier(modifier);
+
+                    if (player.getHealth() > maxHealth.getValue()) {
+                        player.setHealth(maxHealth.getValue());
+                    }
+                }
+            }
+        }
     }
 
     /**
