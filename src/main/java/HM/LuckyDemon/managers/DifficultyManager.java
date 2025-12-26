@@ -533,6 +533,9 @@ public class DifficultyManager {
     private void makeCreperCharged(org.bukkit.entity.Creeper creeper) {
         creeper.setPowered(true);
 
+        // Configurar el radio de explosión de creeper eléctrico
+        creeper.setExplosionRadius(6);
+
         // Nombre especial
         creeper.customName(net.kyori.adventure.text.Component.text("Creeper Eléctrico")
                 .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW)

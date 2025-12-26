@@ -507,4 +507,25 @@ public class Day40InventoryListener implements Listener {
             removeLockedSlotsFromPlayer(player);
         }
     }
+
+    /**
+     * Restringir el crafteo de la Reliquia del Fin solo a día 40+
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onCraftEndRelic(org.bukkit.event.inventory.PrepareItemCraftEvent e) {
+        if (e.getRecipe() == null || e.getRecipe().getResult() == null) {
+            return;
+        }
+
+        // Verificar si el resultado es la Reliquia del Fin
+        ItemStack result = e.getRecipe().getResult();
+        if (!isEndRelic(result)) {
+            return;
+        }
+
+        // Si no es día 40+, cancelar el crafteo
+        if (GameManager.getInstance().getDay() < 40) {
+            e.getInventory().setResult(null);
+        }
+    }
 }
