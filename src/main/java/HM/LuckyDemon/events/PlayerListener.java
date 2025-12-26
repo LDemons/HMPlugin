@@ -78,10 +78,8 @@ public class PlayerListener implements Listener {
             e.setCancelled(true);
             // Resetear el contador de phantoms aunque no se pueda dormir
             e.getPlayer().setStatistic(org.bukkit.Statistic.TIME_SINCE_REST, 0);
-            int specialDay = HMPlugin.getInstance().getDifficultyManager().getSpecialRulesDay();
             MessageUtils.send(e.getPlayer(),
-                    "<red>☠ A partir del día " + specialDay
-                            + ", la noche no se puede saltar... <gray>(Pero te has relajado, <green>los Phantoms se han reiniciado<gray>)");
+                    "<red>☠ La noche no se puede saltar... <gray>(Pero te has relajado, <green>los Phantoms se han reiniciado<gray>)");
             e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.8f);
             return;
         }

@@ -8,14 +8,81 @@ import org.bukkit.GameRule;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 public class GameManager {
 
     private static GameManager instance;
     private int currentDay;
+    private LocalDate startDate;
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private GameManager() {
-        this.currentDay = HMPlugin.getInstance().getConfig().getInt("game.day", 1);
+        loadFromConfig();
+        startDayChecker();
+    }
+
+    /**
+     * Cargar configuración desde config.yml
+     */
+    private void loadFromConfig() {
+        String startDateStr = HMPlugin.getInstance().getConfig().getString("game.start_date", "");
+
+        if (startDateStr == null || startDateStr.isEmpty()) {
+            // Primera vez - establecer fecha de inicio como hoy
+            this.startDate = LocalDate.now();
+            this.currentDay = 1;
+            saveToConfig();
+        } else {
+            try {
+                this.startDate = LocalDate.parse(startDateStr, DATE_FORMAT);
+                // Calcular el día actual basado en la fecha de inicio
+                this.currentDay = calculateCurrentDay();
+            } catch (Exception e) {
+                // Si hay error, resetear a hoy
+                this.startDate = LocalDate.now();
+                this.currentDay = 1;
+                saveToConfig();
+            }
+        }
+    }
+
+    /**
+     * Guardar configuración en config.yml
+     */
+    private void saveToConfig() {
+        HMPlugin.getInstance().getConfig().set("game.day", currentDay);
+        HMPlugin.getInstance().getConfig().set("game.start_date", startDate.format(DATE_FORMAT));
+        HMPlugin.getInstance().saveConfig();
+    }
+
+    /**
+     * Calcular el día actual basado en la fecha de inicio
+     */
+    private int calculateCurrentDay() {
+        long daysSinceStart = ChronoUnit.DAYS.between(startDate, LocalDate.now());
+        return (int) daysSinceStart + 1; // +1 porque el día 1 es el día de inicio
+    }
+
+    /**
+     * Iniciar el verificador de días (cada minuto)
+     */
+    private void startDayChecker() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                int calculatedDay = calculateCurrentDay();
+
+                // Si el día calculado es diferente al actual, avanzar
+                if (calculatedDay > currentDay) {
+                    setDay(calculatedDay, true); // true = es cambio automático
+                }
+            }
+        }.runTaskTimer(HMPlugin.getInstance(), 20L * 60, 20L * 60); // Cada minuto (1200 ticks)
     }
 
     public static GameManager getInstance() {
@@ -29,50 +96,73 @@ public class GameManager {
         return currentDay;
     }
 
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    /**
+     * Cambiar el día (manual)
+     */
     public void setDay(int day) {
+        setDay(day, false);
+    }
+
+    /**
+     * Cambiar el día
+     * 
+     * @param day       Nuevo día
+     * @param automatic Si es true, es un cambio automático por fecha (sin anuncio)
+     */
+    public void setDay(int day, boolean automatic) {
+        int previousDay = this.currentDay;
         this.currentDay = day;
-        HMPlugin.getInstance().getConfig().set("game.day", day);
-        HMPlugin.getInstance().saveConfig();
+
+        // Si es cambio manual, ajustar la fecha de inicio para que coincida
+        if (!automatic) {
+            // Calcular nueva fecha de inicio para que el día actual sea el especificado
+            this.startDate = LocalDate.now().minusDays(day - 1);
+        }
+
+        saveToConfig();
 
         HMPlugin.getInstance().getDifficultyManager().setCurrentDay(day);
 
-        Bukkit.broadcast(MessageUtils.format("<yellow>¡El tiempo ha cambiado! Ahora es el día <red><bold>" + day));
+        // Solo anunciar si es cambio manual
+        if (!automatic) {
+            Bukkit.broadcast(MessageUtils.format("<yellow>¡El tiempo ha cambiado! Ahora es el día <red><bold>" + day));
 
-        int diffLevel = HMPlugin.getInstance().getDifficultyManager().getDifficultyLevel();
-        if (diffLevel > 0 && day % 10 == 0) {
-            Bukkit.broadcast(MessageUtils.format("<red><bold>⚠ ¡NIVEL DE DIFICULTAD AUMENTADO! ⚠"));
-            Bukkit.broadcast(MessageUtils.format("<gold>La supervivencia será más difícil..."));
+            int diffLevel = HMPlugin.getInstance().getDifficultyManager().getDifficultyLevel();
+            if (diffLevel > 0 && day % 10 == 0) {
+                Bukkit.broadcast(MessageUtils.format("<red><bold>⚠ ¡NIVEL DE DIFICULTAD AUMENTADO! ⚠"));
+                Bukkit.broadcast(MessageUtils.format("<gold>La supervivencia será más difícil..."));
+            }
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+            }
         }
 
-        // DÍA 20: Activar KeepInventory y anunciar nuevas mecánicas
-        if (day == 20) {
+        // DÍA 20: Activar KeepInventory (sin anuncio)
+        if (day >= 20 && previousDay < 20) {
             for (World world : Bukkit.getWorlds()) {
                 world.setGameRule(GameRule.KEEP_INVENTORY, true);
             }
-            Bukkit.broadcast(MessageUtils.format("<green><bold>✓ KeepInventory activado - No perderás items al morir"));
-            Bukkit.broadcast(MessageUtils.format("<dark_red><bold>⚠ DÍA 20: NUEVAS MECÁNICAS DESBLOQUEADAS"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Ancient Cities dan oro"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Trial Chambers dan tótems"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Animales pasivos son agresivos"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Murciélagos atacan y dan ceguera"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Ghasts son hostiles normales"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Wardens 2x velocidad"));
-            Bukkit.broadcast(MessageUtils.format("<gold>- Bad Omen da Weakness"));
         }
 
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+        // DÍA 40: Aplicar slots bloqueados (sin anuncio)
+        if (day >= 40 && previousDay < 40) {
+            HM.LuckyDemon.events.Day40InventoryListener.applyToAllPlayers();
         }
     }
 
     public void advanceDay() {
-        setDay(currentDay + 1);
+        setDay(currentDay + 1, false);
     }
 
     public void reset() {
-        this.currentDay = 0;
-        HMPlugin.getInstance().getConfig().set("game.day", 0);
-        HMPlugin.getInstance().saveConfig();
+        this.currentDay = 1;
+        this.startDate = LocalDate.now();
+        saveToConfig();
 
         HMPlugin.getInstance().getDifficultyManager().reset();
 
@@ -81,7 +171,10 @@ public class GameManager {
             world.setGameRule(GameRule.KEEP_INVENTORY, false);
         }
 
-        Bukkit.broadcast(MessageUtils.format("<gold>⚠ El juego ha sido reseteado al día 0"));
+        // Remover slots bloqueados
+        HM.LuckyDemon.events.Day40InventoryListener.removeFromAllPlayers();
+
+        Bukkit.broadcast(MessageUtils.format("<gold>⚠ El juego ha sido reseteado al día 1"));
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.0f);

@@ -1,4 +1,4 @@
-# Configuración de HMPluggin (Permadeath Reborn)
+# Configuración de HMPlugin (Permadeath Reborn)
 # Versión 1.0.0
 
 # Prefijo que se mostrará en los mensajes del chat
@@ -11,8 +11,10 @@ messages:
 
 # Opciones de juego
 game:
-  # Día actual del Permadeath
+  # Día actual del HMPlugin (Permadeath)
   day: 1
+  # Fecha de inicio del HMPlugin (Permadeath) (formato: YYYY-MM-DD, se configura automáticamente)
+  start_date: ""
   # Activar el ban al morir
   ban_enabled: true
 
