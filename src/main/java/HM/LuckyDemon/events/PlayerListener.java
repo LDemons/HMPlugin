@@ -700,8 +700,10 @@ public class PlayerListener implements Listener {
             customMessage = HMPlugin.getInstance().getConfig()
                     .getString("death_messages." + player.getUniqueId().toString() + ".life2", null);
         } else if (lostLifeNumber == 3) {
-            // Mensaje predeterminado para la tercera vida (final)
-            customMessage = "Este es tu final... no hay vuelta atrás.";
+            // Mensaje final configurado por el admin o predeterminado
+            customMessage = HMPlugin.getInstance().getConfig()
+                    .getString("death_messages." + player.getUniqueId().toString() + ".life3",
+                            "Este es tu final... no hay vuelta atrás.");
         }
 
         // Obtener la causa de muerte ANTES de modificar el mensaje
@@ -716,18 +718,43 @@ public class PlayerListener implements Listener {
             }
         }
 
+        // Mensaje de cabecera dependiendo de si fue permabaneado o perdió una vida
+        Component headerMsg;
+        if (remainingLives <= 0) {
+            headerMsg = MessageUtils.format(
+                    "<red>¡Este es el comienzo del sufrimiento eterno de <dark_red><bold>" + victim + "</bold><red>!");
+        } else {
+            headerMsg = MessageUtils.format(
+                    "<red>¡Este es el comienzo del sufrimiento eterno de <dark_red><bold>" + victim + "</bold><red>!");
+        }
+
         Component deathMsg;
         if (customMessage != null && !customMessage.isEmpty()) {
-            deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim
-                    + " " + deathCauseText + ". <yellow>Vidas restantes: " + remainingLives + "/"
-                    + livesManager.getMaxLives()
-                    + "<br><gray><!bold><italic>\"" + customMessage + "\"");
+            deathMsg = MessageUtils.format(
+                    "<red><bold>Vidas restantes: <yellow>" + remainingLives + "/"
+                            + livesManager.getMaxLives() + " <gray>- <italic>\"" + customMessage + "\"");
         } else {
-            deathMsg = MessageUtils.format("<red><bold>PERMADEATH <gray>» <red>" + victim
-                    + " " + deathCauseText + ". <yellow>Vidas restantes: " + remainingLives + "/"
-                    + livesManager.getMaxLives());
+            deathMsg = MessageUtils.format(
+                    "<red><bold>Vidas restantes: <yellow>" + remainingLives + "/"
+                            + livesManager.getMaxLives());
         }
-        e.deathMessage(deathMsg);
+
+        // Hacer el mensaje de muerte de Minecraft en blanco
+        Component whiteDeathMessage = originalDeathMessage != null
+                ? Component.text("").color(net.kyori.adventure.text.format.NamedTextColor.WHITE).append(
+                        originalDeathMessage.colorIfAbsent(net.kyori.adventure.text.format.NamedTextColor.WHITE))
+                : null;
+
+        // Construir mensaje completo: cabecera + mensaje MC + nuestro mensaje
+        if (whiteDeathMessage != null) {
+            e.deathMessage(headerMsg
+                    .append(Component.newline())
+                    .append(whiteDeathMessage)
+                    .append(Component.newline())
+                    .append(deathMsg));
+        } else {
+            e.deathMessage(headerMsg.append(Component.newline()).append(deathMsg));
+        }
 
         // Obtener causa de muerte
         Component deathMessageComponent = e.deathMessage();
@@ -783,9 +810,15 @@ public class PlayerListener implements Listener {
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             player.setGameMode(GameMode.SPECTATOR);
 
+            // Sonido de muerte personalizado para TODOS los jugadores (caballo esqueleto +
+            // blaze)
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.playSound(online.getLocation(), Sound.ENTITY_SKELETON_HORSE_DEATH, 1.0f, 0.8f);
+                online.playSound(online.getLocation(), Sound.ENTITY_BLAZE_DEATH, 1.0f, 0.6f);
+            }
+
             if (remainingLives > 0) {
-                MessageUtils.send(player, "<yellow>Volverás al juego en 5 segundos... (<green>" + remainingLives
-                        + " vidas restantes<yellow>)");
+                MessageUtils.send(player, "<yellow>Volverás al juego en 5 segundos...");
 
                 Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                     player.setGameMode(GameMode.SURVIVAL);

@@ -76,7 +76,7 @@ public class Day40LootListener implements Listener {
                 Damageable damageable = (Damageable) meta;
                 // Solo dañar si está nueva o casi nueva
                 if (damageable.getDamage() < 400) {
-                    damageable.setDamage(422);
+                    damageable.setDamage(431);
                     item.setItemMeta(meta);
                 }
             }

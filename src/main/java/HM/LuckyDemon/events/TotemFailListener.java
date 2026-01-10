@@ -63,8 +63,6 @@ public class TotemFailListener implements Listener {
                 // Buscar y remover el segundo tótem del inventario
                 removeSecondTotemFromInventory(player, totemInMainHand, totemInOffHand);
 
-                // Mensaje de consumo doble
-                MessageUtils.send(player, "<gray>Se han consumido <yellow>2 tótems <gray>(Día 40+)");
             } else {
                 // Solo tiene 1 tótem, avisar
                 MessageUtils.send(player, "<gray>Solo tenías <yellow>1 tótem <gray>(Se requieren 2 en día 40+)");
@@ -80,10 +78,13 @@ public class TotemFailListener implements Listener {
             // CANCELAR la resurrección
             e.setCancelled(true);
 
+            // Determinar cantidad de tótems consumidos
+            String totemCount = currentDay >= 40 ? "2 tótems" : "un tótem";
+
             // Mensaje de fallo en broadcast
             Bukkit.broadcast(MessageUtils.format(
                     "<gray>El jugador <white>" + player.getName()
-                            + "<gray> ha consumido un tótem <red>(Probabilidad: <bold>" + roll
+                            + "<gray> ha consumido " + totemCount + " <red>(Probabilidad: <bold>" + roll
                             + " <gray>[<= <red>" + failChance + "<gray>])"));
 
             // Mensaje personal de fallo
@@ -97,9 +98,11 @@ public class TotemFailListener implements Listener {
                     .info("Tótem de " + player.getName() + " ha fallado (roll: " + roll + "/" + failChance + "%)");
         } else {
             // Tótem funcionó correctamente
+            String totemCount = currentDay >= 40 ? "2 tótems" : "un tótem";
+
             Bukkit.broadcast(MessageUtils.format(
                     "<gray>El jugador <white>" + player.getName()
-                            + "<gray> ha consumido un tótem <green>(Probabilidad: <bold>" + roll
+                            + "<gray> ha consumido " + totemCount + " <green>(Probabilidad: <bold>" + roll
                             + " <gray>[> <green>" + failChance + "<gray>])"));
         }
     }

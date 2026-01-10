@@ -394,6 +394,80 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("finalmsg")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+
+            if (args.length < 2) {
+                // Mostrar todos los mensajes finales configurados
+                MessageUtils.send(player, "<gradient:dark_red:red><bold>═══ MENSAJES FINALES ═══</gradient>");
+                org.bukkit.configuration.ConfigurationSection deathMsgSection = HMPlugin.getInstance().getConfig()
+                        .getConfigurationSection("death_messages");
+                if (deathMsgSection != null) {
+                    for (String key : deathMsgSection.getKeys(false)) {
+                        String finalMsg = HMPlugin.getInstance().getConfig()
+                                .getString("death_messages." + key + ".life3", null);
+                        if (finalMsg != null) {
+                            // Intentar obtener nombre del jugador
+                            org.bukkit.OfflinePlayer offlinePlayer = Bukkit
+                                    .getOfflinePlayer(java.util.UUID.fromString(key));
+                            String playerName = offlinePlayer.getName() != null ? offlinePlayer.getName() : key;
+                            MessageUtils.send(player, "<dark_red>" + playerName + "<gray>: <white>" + finalMsg);
+                        }
+                    }
+                }
+                MessageUtils.send(player, "");
+                MessageUtils.send(player, "<yellow>Usa: /hm finalmsg <jugador> <texto>");
+                return true;
+            }
+
+            if (args.length < 3) {
+                // Mostrar mensaje de un jugador específico
+                Player target = Bukkit.getPlayer(args[1]);
+                org.bukkit.OfflinePlayer offlineTarget = target != null ? target : Bukkit.getOfflinePlayer(args[1]);
+
+                if (offlineTarget.getUniqueId() == null) {
+                    MessageUtils.send(player, "<red>Jugador no encontrado.");
+                    return true;
+                }
+
+                String finalMsg = HMPlugin.getInstance().getConfig()
+                        .getString("death_messages." + offlineTarget.getUniqueId().toString() + ".life3", null);
+
+                if (finalMsg != null) {
+                    MessageUtils.send(player, "<dark_red>Mensaje final de " + args[1] + "<gray>: <white>" + finalMsg);
+                } else {
+                    MessageUtils.send(player, "<yellow>No hay mensaje final configurado para " + args[1]);
+                }
+                MessageUtils.send(player, "<gray>Usa: /hm finalmsg " + args[1] + " <texto> para configurar");
+                return true;
+            }
+
+            // Configurar mensaje final
+            Player target = Bukkit.getPlayer(args[1]);
+            org.bukkit.OfflinePlayer offlineTarget = target != null ? target : Bukkit.getOfflinePlayer(args[1]);
+
+            StringBuilder messageBuilder = new StringBuilder();
+            for (int i = 2; i < args.length; i++) {
+                messageBuilder.append(args[i]);
+                if (i < args.length - 1) {
+                    messageBuilder.append(" ");
+                }
+            }
+            String finalMessage = messageBuilder.toString();
+
+            String configPath = "death_messages." + offlineTarget.getUniqueId().toString() + ".life3";
+            HMPlugin.getInstance().getConfig().set(configPath, finalMessage);
+            HMPlugin.getInstance().saveConfig();
+
+            String targetName = offlineTarget.getName() != null ? offlineTarget.getName() : args[1];
+            MessageUtils.send(player, "<green>¡Mensaje final de <dark_red>" + targetName + "<green> configurado!");
+            MessageUtils.send(player, "<gray>Vista previa: <white><italic>\"" + finalMessage + "\"");
+            return true;
+        }
+
         MessageUtils.send(player, "<yellow>Comando desconocido. Usa: /hm para ver la lista de comandos.");
         return true;
     }
@@ -406,7 +480,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
-                    "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor");
+                    "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor", "finalmsg");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
@@ -441,6 +515,14 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             if (subcommand.equals("reducestorm") && sender.isOp()) {
                 return Arrays.asList("1", "2", "3", "5", "10", "24").stream()
                         .filter(hour -> hour.startsWith(args[1]))
+                        .collect(Collectors.toList());
+            }
+
+            // Comando finalmsg - sugerir nombres de jugadores
+            if (subcommand.equals("finalmsg") && sender.isOp()) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
             }
         }
