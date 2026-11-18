@@ -17,13 +17,18 @@ public class WebhookUtils {
             // Leer configuración
             String baseUrl = HMPlugin.getInstance().getConfig().getString("discord_api.base_url");
             String apiKey = HMPlugin.getInstance().getConfig().getString("discord_api.api_key");
-            
+            if (apiKey == null || apiKey.isBlank()) {
+                return; // Sin api_key no hay bot configurado: evita un error en consola cada 15 s
+            }
+
             // Endpoint completo (ej: http://127.0.0.1:3000/status)
             String fullUrl = baseUrl + "/status";
 
             try {
                 URL url = new URL(fullUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(3000);
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 // CLAVE SECRETA: Se añade la cabecera X-API-KEY
@@ -64,6 +69,8 @@ public class WebhookUtils {
                 
                 URL url = new URL(fullUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(3000);
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setRequestProperty("X-API-KEY", apiKey);
@@ -121,6 +128,8 @@ public class WebhookUtils {
             
             URL url = new URL(webhookUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(3000); // sin timeout, el aviso de cierre puede colgar el apagado
+            conn.setReadTimeout(3000);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);

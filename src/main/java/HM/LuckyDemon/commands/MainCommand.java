@@ -349,13 +349,12 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 maxHealth.setBaseValue(20.0);
                 player.setHealth(20.0);
 
-                // Remover tag de vida reducida día 40
-                org.bukkit.NamespacedKey healthReducedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
-                        "day40_health_reduced");
-                player.getPersistentDataContainer().remove(healthReducedKey);
+                // Permitir comer otra vez la Hyper Golden Apple
+                player.getPersistentDataContainer().remove(
+                        new org.bukkit.NamespacedKey(HMPlugin.getInstance(), "hyper_apple_eaten"));
 
                 MessageUtils.send(player, "<green>✓ Vida reseteada a 10 corazones (20 HP)");
-                MessageUtils.send(player, "<yellow>Tag de día 40 removido. Reconéctate para probar la reducción.");
+                MessageUtils.send(player, "<yellow>Reconéctate para que se vuelva a aplicar la vida del día 40.");
                 player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
             } else {
                 MessageUtils.send(player, "<red>Error al resetear la vida.");

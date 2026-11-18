@@ -45,8 +45,8 @@ public class DifficultyManager {
             }
         }
         difficultyConfig = YamlConfiguration.loadConfiguration(difficultyFile);
-        currentDay = difficultyConfig.getInt("currentDay", 0);
-        difficultyLevel = difficultyConfig.getInt("difficultyLevel", 0);
+        // El día lo manda GameManager (fecha real): difficulty.yml queda atrasado si el día cambió con el server apagado
+        setCurrentDay(GameManager.getInstance().getDay());
     }
 
     public void saveDifficultyData() {

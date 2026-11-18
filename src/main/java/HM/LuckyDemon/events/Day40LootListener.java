@@ -61,24 +61,26 @@ public class Day40LootListener implements Listener {
     }
 
     /**
-     * Elytras recogidas de marcos de items también se dañan
+     * Las Elytras de los End Ships estan en marcos: se rompen al cargar el chunk,
+     * asi no se toca ninguna elytra que un jugador tire al suelo.
      */
     @EventHandler
-    public void onPickupElytra(org.bukkit.event.player.PlayerPickupItemEvent e) {
-        if (GameManager.getInstance().getDay() < 40) {
+    public void onEndEntitiesLoad(org.bukkit.event.world.EntitiesLoadEvent e) {
+        if (GameManager.getInstance().getDay() < 40
+                || e.getWorld().getEnvironment() != org.bukkit.World.Environment.THE_END) {
             return;
         }
 
-        ItemStack item = e.getItem().getItemStack();
-        if (item.getType() == Material.ELYTRA) {
-            ItemMeta meta = item.getItemMeta();
-            if (meta instanceof Damageable) {
-                Damageable damageable = (Damageable) meta;
-                // Solo dañar si está nueva o casi nueva
-                if (damageable.getDamage() < 400) {
-                    damageable.setDamage(431);
-                    item.setItemMeta(meta);
-                }
+        for (org.bukkit.entity.Entity entity : e.getEntities()) {
+            if (!(entity instanceof org.bukkit.entity.ItemFrame frame)) {
+                continue;
+            }
+            ItemStack item = frame.getItem();
+            if (item.getType() == Material.ELYTRA && item.getItemMeta() instanceof Damageable damageable
+                    && damageable.getDamage() < 400) {
+                damageable.setDamage(431);
+                item.setItemMeta(damageable);
+                frame.setItem(item);
             }
         }
     }

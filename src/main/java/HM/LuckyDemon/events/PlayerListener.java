@@ -416,8 +416,9 @@ public class PlayerListener implements Listener {
                     .spawnEntity(shulker.getLocation(), org.bukkit.entity.EntityType.TNT);
             tnt.setFuseTicks(40); // 2 segundos de fusión
 
-            // 20% drop de Shulker Shell NORMAL pero protegida de explosiones
-            if (new Random().nextInt(100) < 20) {
+            // Drop de Shulker Shell NORMAL pero protegida de explosiones: 20%, y 2% desde el dia 40
+            int shellChance = GameManager.getInstance().getDay() >= 40 ? 2 : 20;
+            if (new Random().nextInt(100) < shellChance) {
                 // Crear item normal
                 org.bukkit.inventory.ItemStack shulkerShell = new org.bukkit.inventory.ItemStack(
                         org.bukkit.Material.SHULKER_SHELL, 1);
@@ -883,41 +884,73 @@ public class PlayerListener implements Listener {
         String gapType = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 
         if ("hyper".equals(gapType)) {
-            AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
-
-            if (attribute != null) {
-                double currentMax = attribute.getValue(); // getValue incluye modificadores
-
-                if (currentMax < 40.0) {
-                    // Crear modificador único para este jugador
-                    java.util.UUID modifierUUID = java.util.UUID.nameUUIDFromBytes(
-                            ("hyper_apple_" + p.getUniqueId().toString() + "_" + System.currentTimeMillis())
-                                    .getBytes());
-
-                    org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
-                            modifierUUID,
-                            "hmplugin.hyper_apple",
-                            4.0, // Agregar 4 puntos (2 corazones)
-                            org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER);
-                    attribute.addModifier(modifier);
-
-                    p.sendMessage(MessageUtils.format("<green>¡Has ganado contenedores de vida extra!"));
-                } else {
-                    p.sendMessage(MessageUtils.format("<red>Ya has alcanzado el límite de vida extra."));
-                }
+            // Solo se puede comer 1 vez en toda la partida
+            if (p.getPersistentDataContainer().has(hyperEatenKey(), PersistentDataType.BYTE)) {
+                e.setCancelled(true);
+                p.sendMessage(MessageUtils.format("<red>Ya comiste una Hyper Golden Apple +, solo se puede comer 1 vez."));
+                return;
             }
+
+            p.getPersistentDataContainer().set(hyperEatenKey(), PersistentDataType.BYTE, (byte) 1);
+            updateHealth(p);
+            p.sendMessage(MessageUtils.format("<green>¡Has ganado 2 contenedores de vida permanentes!"));
 
             p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 30, 2));
             p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 20 * 120, 2));
 
+        } else if ("super".equals(gapType)) {
+            // Health Boost I por 5 minutos; volver a comerla solo reinicia el tiempo
+            p.addPotionEffect(new PotionEffect(PotionEffectType.HEALTH_BOOST, 20 * 60 * 5, 0));
         }
     }
 
-    private void updateHealth(Player p) {
+    private static final UUID DAY40_HEALTH_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000001");
+    private static final UUID HYPER_APPLE_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000002");
+
+    private static NamespacedKey hyperEatenKey() {
+        return new NamespacedKey(HMPlugin.getInstance(), "hyper_apple_eaten");
+    }
+
+    /**
+     * Unico lugar que calcula la vida maxima: base 20, -4 corazones desde el dia 40
+     * y +2 si ya comio la Hyper Golden Apple. Se puede llamar las veces que sea.
+     */
+    public static void updateHealth(Player p) {
         AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
-        if (attribute != null && attribute.getBaseValue() < 20.0) {
+        if (attribute == null)
+            return;
+        if (attribute.getBaseValue() < 20.0) {
             attribute.setBaseValue(20.0);
         }
+        setHealthModifier(attribute, DAY40_HEALTH_UUID, "hmplugin.day40.health_reduction", -8.0,
+                GameManager.getInstance().getDay() >= 40);
+        setHealthModifier(attribute, HYPER_APPLE_UUID, "hmplugin.hyper_apple", 4.0,
+                p.getPersistentDataContainer().has(hyperEatenKey(), PersistentDataType.BYTE));
+        if (!p.isDead() && p.getHealth() > attribute.getValue()) {
+            p.setHealth(attribute.getValue());
+        }
+    }
+
+    private static void setHealthModifier(AttributeInstance attribute, UUID id, String name, double amount,
+            boolean active) {
+        org.bukkit.attribute.AttributeModifier current = null;
+        for (org.bukkit.attribute.AttributeModifier mod : attribute.getModifiers()) {
+            if (mod.getUniqueId().equals(id)) {
+                current = mod;
+            }
+        }
+        if (active && current == null) {
+            attribute.addModifier(new org.bukkit.attribute.AttributeModifier(id, name, amount,
+                    org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER));
+        } else if (!active && current != null) {
+            attribute.removeModifier(current);
+        }
+    }
+
+    @EventHandler
+    public void onRespawn(org.bukkit.event.player.PlayerRespawnEvent e) {
+        // Por si el respawn pierde los modificadores de vida
+        Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> updateHealth(e.getPlayer()), 1L);
     }
 
     /**

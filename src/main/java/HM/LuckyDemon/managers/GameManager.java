@@ -161,31 +161,9 @@ public class GameManager {
             HM.LuckyDemon.events.Day40InventoryListener.applyToAllPlayers();
         }
 
-        // DÍA 40+: Reducir vida a todos los jugadores conectados (solo una vez)
-        if (day >= 40) {
-            org.bukkit.NamespacedKey healthReducedKey = new org.bukkit.NamespacedKey(HMPlugin.getInstance(),
-                    "day40_health_reduced");
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (!p.getPersistentDataContainer().has(healthReducedKey,
-                        org.bukkit.persistence.PersistentDataType.BYTE)) {
-                    org.bukkit.attribute.AttributeInstance maxHealth = p
-                            .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
-                    if (maxHealth != null) {
-                        double currentMax = maxHealth.getBaseValue();
-                        // Reducir 8 puntos (4 corazones), mínimo 12 (6 corazones)
-                        double newMax = Math.max(12.0, currentMax - 8.0);
-                        maxHealth.setBaseValue(newMax);
-                        if (p.getHealth() > newMax) {
-                            p.setHealth(newMax);
-                        }
-                        // Marcar como reducido
-                        p.getPersistentDataContainer().set(healthReducedKey,
-                                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-                        Bukkit.getLogger().info(
-                                "[HMPlugin] Vida reducida para " + p.getName() + ": " + currentMax + " -> " + newMax);
-                    }
-                }
-            }
+        // DÍA 40+: -4 corazones (se quitan si se vuelve a un dia anterior)
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            HM.LuckyDemon.events.PlayerListener.updateHealth(p);
         }
 
         // Si baja de día 40, remover slots bloqueados
@@ -226,6 +204,9 @@ public class GameManager {
 
         // Remover slots bloqueados
         HM.LuckyDemon.events.Day40InventoryListener.removeFromAllPlayers();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            HM.LuckyDemon.events.PlayerListener.updateHealth(p);
+        }
 
         Bukkit.broadcast(MessageUtils.format("<gold>⚠ El juego ha sido reseteado al día 1"));
 

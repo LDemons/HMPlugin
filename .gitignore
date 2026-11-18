@@ -37,3 +37,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+### Contexto local de Claude (nunca subir) ###
+contexto.md
+CLAUDE.md
+.claude/

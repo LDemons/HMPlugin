@@ -121,34 +121,24 @@ public class Day40InventoryListener implements Listener {
                 updateLockedSlots(player);
             }, 20L);
         }
+        // La vida maxima del dia 40 la calcula PlayerListener.updateHealth al entrar
+    }
 
-        // Reducir vida máxima en 4 contenedores (8 puntos) - día 40+
-        if (GameManager.getInstance().getDay() >= 40) {
-            org.bukkit.attribute.AttributeInstance maxHealth = player
-                    .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+    /**
+     * Si la Reliquia sale del inventario (a un cofre, etc.) vuelven los bloqueos;
+     * si entra, se liberan.
+     */
+    @EventHandler
+    public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        if (e.getPlayer() instanceof Player player) {
+            updateLockedSlots(player);
+        }
+    }
 
-            if (maxHealth != null) {
-                // UUID único del modificador
-                java.util.UUID modifierUUID = java.util.UUID.fromString("d40a0000-0000-0000-0000-000000000001");
-
-                // Verificar si ya tiene el modificador
-                boolean hasModifier = maxHealth.getModifiers().stream()
-                        .anyMatch(mod -> mod.getUniqueId().equals(modifierUUID));
-
-                if (!hasModifier) {
-                    // Agregar modificador que resta 8 puntos
-                    org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
-                            modifierUUID,
-                            "hmplugin.day40.health_reduction",
-                            -8.0,
-                            org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER);
-                    maxHealth.addModifier(modifier);
-
-                    if (player.getHealth() > maxHealth.getValue()) {
-                        player.setHealth(maxHealth.getValue());
-                    }
-                }
-            }
+    @EventHandler
+    public void onPickupRelic(org.bukkit.event.entity.EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof Player player && isEndRelic(e.getItem().getItemStack())) {
+            Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> updateLockedSlots(player), 1L);
         }
     }
 
