@@ -18,6 +18,12 @@ game:
   # Activar el ban al morir
   ban_enabled: true
 
+# Resource pack con las animaciones. El plugin lo sirve por HTTP y lo envia al entrar (obligatorio).
+# El puerto tiene que estar abierto en el servidor para los jugadores de fuera.
+resource_pack:
+  enabled: true
+  port: 8124
+
 discord_api:
   base_url: "https://bot.warevision.net"
   api_key: ""

@@ -827,39 +827,24 @@ public class PlayerListener implements Listener {
                     player.setFoodLevel(20);
                     player.setSaturation(20.0f);
 
-                    int maxLives = livesManager.getMaxLives();
-                    StringBuilder heartsDisplay = new StringBuilder();
-                    for (int i = 0; i < maxLives; i++) {
-                        if (i < remainingLives) {
-                            heartsDisplay.append("<red>❤ ");
-                        } else {
-                            heartsDisplay.append("<gray>❤ ");
-                        }
-                    }
-
-                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT, 1.0f, 0.5f);
-                    player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5f, 1.5f);
-
-                    player.showTitle(net.kyori.adventure.title.Title.title(
-                            MessageUtils.format("<gradient:red:dark_red><bold>-1 VIDA</gradient>"),
-                            MessageUtils.format(heartsDisplay.toString() + " <yellow>" + remainingLives + "/" + maxLives
-                                    + " vidas"),
-                            net.kyori.adventure.title.Title.Times.times(
-                                    java.time.Duration.ofMillis(500),
-                                    java.time.Duration.ofMillis(2500),
-                                    java.time.Duration.ofMillis(1000))));
+                    HM.LuckyDemon.utils.HeartAnimation.play(player, remainingLives, livesManager.getMaxLives());
 
                     MessageUtils.send(player, "<green>¡Has regresado al juego! <gray>Te quedan <yellow>"
                             + remainingLives + " vidas<gray>.");
                 }, 100L);
             } else {
                 MessageUtils.send(player, "<dark_red><bold>¡TE HAS QUEDADO SIN VIDAS!");
+                // Igual que en las demas muertes: primero el titulo de Permadeath, a los 5 s el corazon
+                Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(),
+                        () -> HM.LuckyDemon.utils.HeartAnimation.play(player, 0, livesManager.getMaxLives()), 100L);
 
                 if (HMPlugin.getInstance().getConfig().getBoolean("game.ban_enabled", true)) {
+                    MessageUtils.send(player, "<gray>Te quedan 20 segundos para despedirte...");
+                    // 20 s en espectador: titulo (5 s), animacion (~4 s) y un rato para mirar antes de la expulsion
                     Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                         player.kick(MessageUtils.format(
                                 "<red><bold>TE QUEDASTE SIN VIDAS<br><br><yellow>Has perdido todas tus vidas.<br><gray>Contacta a un administrador para volver."));
-                    }, 100L);
+                    }, 400L);
                 }
             }
         }, 2L);

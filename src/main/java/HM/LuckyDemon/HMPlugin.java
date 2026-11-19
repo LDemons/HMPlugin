@@ -13,6 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class HMPlugin extends JavaPlugin {
     private DifficultyManager difficultyManager;
+    private HM.LuckyDemon.utils.ResourcePackServer resourcePackServer;
 
     private static HMPlugin instance;
 
@@ -73,6 +74,12 @@ public class HMPlugin extends JavaPlugin {
         // DÍA 40+: Modificaciones de loot
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40LootListener(), this);
 
+        // Resource pack (animacion de corazon perdido)
+        resourcePackServer = new HM.LuckyDemon.utils.ResourcePackServer();
+        if (resourcePackServer.start()) {
+            getServer().getPluginManager().registerEvents(resourcePackServer, this);
+        }
+
         // Tarea de Tormenta
         new HM.LuckyDemon.tasks.StormTask().runTaskTimer(this, 0L, 20L);
 
@@ -112,6 +119,8 @@ public class HMPlugin extends JavaPlugin {
 
         // Desactivar scoreboard
         ScoreboardManager.getInstance().disable();
+
+        if (resourcePackServer != null) resourcePackServer.stop();
     }
 
     public static HMPlugin getInstance() {
