@@ -40,8 +40,9 @@ public class GameManager {
         } else {
             try {
                 this.startDate = LocalDate.parse(startDateStr, DATE_FORMAT);
-                // Calcular el día actual basado en la fecha de inicio
-                this.currentDay = calculateCurrentDay();
+                // Se arranca con el ultimo dia guardado: si el dia avanzo con el server apagado, el verificador
+                // lo sube con setDay y asi se aplican los cambios de dia (estructuras del 40, etc.)
+                this.currentDay = HMPlugin.getInstance().getConfig().getInt("game.day", calculateCurrentDay());
             } catch (Exception e) {
                 // Si hay error, resetear a hoy
                 this.startDate = LocalDate.now();
@@ -82,7 +83,7 @@ public class GameManager {
                     setDay(calculatedDay, true); // true = es cambio automático
                 }
             }
-        }.runTaskTimer(HMPlugin.getInstance(), 20L * 60, 20L * 60); // Cada minuto (1200 ticks)
+        }.runTaskTimer(HMPlugin.getInstance(), 1L, 20L * 60); // Al arrancar y despues cada minuto
     }
 
     public static GameManager getInstance() {
@@ -195,7 +196,7 @@ public class GameManager {
         this.startDate = LocalDate.now();
         saveToConfig();
 
-        HMPlugin.getInstance().getDifficultyManager().reset();
+        HMPlugin.getInstance().getDifficultyManager().setCurrentDay(1);
 
         // Desactivar KeepInventory al resetear
         for (World world : Bukkit.getWorlds()) {

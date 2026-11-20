@@ -1,6 +1,5 @@
 package HM.LuckyDemon;
 
-import HM.LuckyDemon.events.BastionLootListener;
 import HM.LuckyDemon.managers.DifficultyManager;
 import HM.LuckyDemon.utils.MessageUtils;
 import HM.LuckyDemon.utils.WebhookUtils;
@@ -52,7 +51,6 @@ public class HMPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.LootModifierListener(), this);
 
         // Netherite baneada
-        getServer().getPluginManager().registerEvents(new BastionLootListener(), this);
         getServer().getPluginManager().registerEvents(new AncientDebrisListener(), this);
 
         // Registrar mecánicas día 25+ (Ghast demoníaco)

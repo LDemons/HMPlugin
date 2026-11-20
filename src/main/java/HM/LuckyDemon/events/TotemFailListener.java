@@ -11,7 +11,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityResurrectEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.util.Random;
 
@@ -41,32 +43,17 @@ public class TotemFailListener implements Listener {
         }
 
         Player player = (Player) e.getEntity();
+        PlayerInventory inv = player.getInventory();
 
-        // Verificar que sea un tótem
-        ItemStack mainHand = player.getInventory().getItemInMainHand();
-        ItemStack offHand = player.getInventory().getItemInOffHand();
-
-        boolean totemInMainHand = mainHand != null && mainHand.getType() == Material.TOTEM_OF_UNDYING;
-        boolean totemInOffHand = offHand != null && offHand.getType() == Material.TOTEM_OF_UNDYING;
-
-        if (!totemInMainHand && !totemInOffHand) {
+        // Mano con el totem que usa el juego (null si no hay totem)
+        EquipmentSlot hand = e.getHand();
+        if (hand == null) {
             return;
         }
 
         // DÍA 40+: Consumir 2 tótems en vez de 1
-        if (currentDay >= 40) {
-            // Contar tótems en el inventario
-            int totemsInInventory = countTotemsInInventory(player);
-
-            // Si el jugador tiene otro tótem, consumirlo también
-            if (totemsInInventory >= 1) {
-                // Buscar y remover el segundo tótem del inventario
-                removeSecondTotemFromInventory(player, totemInMainHand, totemInOffHand);
-
-            } else {
-                // Solo tiene 1 tótem, avisar
-                MessageUtils.send(player, "<gray>Solo tenías <yellow>1 tótem <gray>(Se requieren 2 en día 40+)");
-            }
+        if (currentDay >= 40 && !removeSecondTotem(inv, hand)) {
+            MessageUtils.send(player, "<gray>Solo tenías <yellow>1 tótem <gray>(Se requieren 2 en día 40+)");
         }
 
         // Calcular probabilidad de fallo
@@ -77,6 +64,8 @@ public class TotemFailListener implements Listener {
         if (failed) {
             // CANCELAR la resurrección
             e.setCancelled(true);
+            // Cancelada, el juego no gasta el totem de la mano: se quita aqui para que el fallo cueste
+            inv.setItem(hand, null);
 
             // Determinar cantidad de tótems consumidos
             String totemCount = currentDay >= 40 ? "2 tótems" : "un tótem";
@@ -108,44 +97,24 @@ public class TotemFailListener implements Listener {
     }
 
     /**
-     * Cuenta cuántos tótems tiene el jugador en el inventario (excluyendo manos)
+     * Quita un segundo totem: del inventario (sin contar el que se esta usando) o de la otra mano.
      */
-    private int countTotemsInInventory(Player player) {
-        int count = 0;
-        for (ItemStack item : player.getInventory().getStorageContents()) {
-            if (item != null && item.getType() == Material.TOTEM_OF_UNDYING) {
-                count += item.getAmount();
-            }
-        }
-        return count;
-    }
-
-    /**
-     * Remueve el segundo tótem del inventario del jugador
-     */
-    private void removeSecondTotemFromInventory(Player player, boolean totemInMainHand, boolean totemInOffHand) {
-        // Primero buscar en el inventario principal
+    private boolean removeSecondTotem(PlayerInventory inv, EquipmentSlot usedHand) {
+        int usedSlot = usedHand == EquipmentSlot.HAND ? inv.getHeldItemSlot() : -1;
         for (int i = 0; i < 36; i++) {
-            ItemStack item = player.getInventory().getItem(i);
-            if (item != null && item.getType() == Material.TOTEM_OF_UNDYING) {
-                if (item.getAmount() > 1) {
-                    item.setAmount(item.getAmount() - 1);
-                } else {
-                    player.getInventory().setItem(i, null);
-                }
-                return;
+            ItemStack item = inv.getItem(i);
+            if (i != usedSlot && item != null && item.getType() == Material.TOTEM_OF_UNDYING) {
+                item.setAmount(item.getAmount() - 1);
+                inv.setItem(i, item); // se vuelve a poner por si getItem devuelve una copia
+                return true;
             }
         }
-
-        // Si no hay en el inventario, consumir de la otra mano
-        if (totemInMainHand && totemInOffHand) {
-            // Si tiene en ambas manos, consumir el de la mano secundaria
-            ItemStack offHand = player.getInventory().getItemInOffHand();
-            if (offHand.getAmount() > 1) {
-                offHand.setAmount(offHand.getAmount() - 1);
-            } else {
-                player.getInventory().setItemInOffHand(null);
-            }
+        ItemStack offHand = inv.getItemInOffHand();
+        if (usedHand == EquipmentSlot.HAND && offHand.getType() == Material.TOTEM_OF_UNDYING) {
+            offHand.setAmount(offHand.getAmount() - 1);
+            inv.setItemInOffHand(offHand);
+            return true;
         }
+        return false;
     }
 }

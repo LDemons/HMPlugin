@@ -202,6 +202,9 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+            // Se muestra a todos con MiniMessage: escapar para que el jugador no meta clicks, lineas falsas, etc.
+            customMessage = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().escapeTags(customMessage);
+
             String configPath = "death_messages." + player.getUniqueId().toString() + ".life" + lifeNumber;
             HMPlugin.getInstance().getConfig().set(configPath, customMessage);
             HMPlugin.getInstance().saveConfig();
@@ -241,7 +244,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            Player target = Bukkit.getPlayer(args[1]);
+            // Tambien desconectados: sin vidas no pueden entrar hasta que se les restablezcan
+            org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(args[1]);
             if (target == null) {
                 MessageUtils.send(player, "<red>Jugador no encontrado.");
                 return true;
@@ -252,7 +256,9 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
             MessageUtils.send(player,
                     "<green>Vidas de " + target.getName() + " restablecidas a " + livesManager.getMaxLives());
-            MessageUtils.send(target, "<green>¡Tus vidas han sido restablecidas!");
+            if (target.getPlayer() != null) {
+                MessageUtils.send(target.getPlayer(), "<green>¡Tus vidas han sido restablecidas!");
+            }
             return true;
         }
 

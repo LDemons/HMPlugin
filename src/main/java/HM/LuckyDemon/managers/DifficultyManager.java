@@ -85,12 +85,6 @@ public class DifficultyManager {
         return difficultyLevel;
     }
 
-    public void reset() {
-        currentDay = 0;
-        difficultyLevel = 0;
-        saveDifficultyData();
-    }
-
     public void startAggressionTask() {
         // Tarea repetitiva que corre cada 2 segundos
         new org.bukkit.scheduler.BukkitRunnable() {
@@ -106,6 +100,15 @@ public class DifficultyManager {
 
                     // Escanear entidades cercanas (15 bloques)
                     for (org.bukkit.entity.Entity entity : player.getNearbyEntities(15, 15, 15)) {
+                        // Pigmans siempre enojados con el jugador que tengan cerca
+                        if (entity instanceof PigZombie pigman) {
+                            if (pigman.getTarget() == null || !pigman.getTarget().isValid()) {
+                                pigman.setAngry(true);
+                                pigman.setTarget(player);
+                            }
+                            continue;
+                        }
+
                         if (entity instanceof Mob) {
                             Mob mob = (Mob) entity;
 
@@ -124,14 +127,12 @@ public class DifficultyManager {
                                     continue;
                                 }
 
-                                // A) SI NO TIENE LA MARCA, DARLE LA IA AGRESIVA AHORA MISMO
-                                if (!mob.getPersistentDataContainer().has(
-                                        new org.bukkit.NamespacedKey(plugin, "is_aggressive"),
-                                        org.bukkit.persistence.PersistentDataType.BYTE)) {
-                                    makeAggressive(mob, 2.0);
-                                }
+                                // A) Darle la IA agresiva si no la tiene (se pierde al reiniciar o recargar el chunk)
+                                makeAggressive(mob, 2.0);
 
-                                // B) Si no tiene objetivo, forzarlo a atacar al jugador
+                                // B) Si no tiene objetivo, forzarlo a atacar al jugador (no a su dueño)
+                                if (isTamed(mob))
+                                    continue;
                                 if (mob.getTarget() == null || !mob.getTarget().isValid()) {
                                     mob.setTarget(player);
                                 }
@@ -179,9 +180,6 @@ public class DifficultyManager {
                 || entity instanceof AbstractVillager) {
             makeAggressive((Mob) entity, 2.0);
         }
-        if (entity instanceof PigZombie) {
-            makePigmanAngry((PigZombie) entity);
-        }
         if (entity instanceof Ravager) {
             setupRavagerLoot((Ravager) entity);
         }
@@ -206,9 +204,6 @@ public class DifficultyManager {
                     || entity instanceof AbstractVillager) {
                 makeAggressive((Mob) entity, 2.0);
             }
-        }
-        if (entity instanceof PigZombie) {
-            makePigmanAngry((PigZombie) entity);
         }
 
         // DÍA 25: Creaking mejorado (Fuerza II, Velocidad III)
@@ -361,8 +356,21 @@ public class DifficultyManager {
             // arañas)
             org.bukkit.NamespacedKey classKey = new org.bukkit.NamespacedKey(plugin, "skeleton_class");
             if (!entity.getPersistentDataContainer().has(classKey, org.bukkit.persistence.PersistentDataType.INTEGER)) {
-                // Asignar clase aleatoria (1-5)
-                int skeletonClass = random.nextInt(5) + 1;
+                // Wither skeletons solo toman clases wither (1 o 5); esqueletos normales cualquiera (1-5)
+                boolean isWither = entity instanceof org.bukkit.entity.WitherSkeleton;
+                int skeletonClass = isWither ? (random.nextBoolean() ? 1 : 5) : random.nextInt(5) + 1;
+
+                if (!isWither && isWitherClass(skeletonClass)) {
+                    // Clase wither en un esqueleto normal: reemplazarlo por un wither skeleton (y re-montarlo)
+                    Entity vehicle = entity.getVehicle();
+                    LivingEntity replacement = spawnClassSkeleton(entity.getLocation(), skeletonClass);
+                    entity.remove();
+                    if (vehicle != null) {
+                        vehicle.addPassenger(replacement);
+                    }
+                    return;
+                }
+
                 entity.getPersistentDataContainer().set(classKey, org.bukkit.persistence.PersistentDataType.INTEGER,
                         skeletonClass);
                 equipSkeletonByClass(entity, skeletonClass);
@@ -633,26 +641,24 @@ public class DifficultyManager {
     }
 
     private void spawnSkeletonRider(Spider spider) {
-        int skeletonClass = random.nextInt(5) + 1;
-        org.bukkit.World world = spider.getWorld();
+        spider.addPassenger(spawnClassSkeleton(spider.getLocation(), random.nextInt(5) + 1));
+    }
 
-        LivingEntity skeleton;
-        if (skeletonClass == 1 || skeletonClass == 5) {
-            skeleton = (org.bukkit.entity.WitherSkeleton) world.spawnEntity(
-                    spider.getLocation(),
-                    org.bukkit.entity.EntityType.WITHER_SKELETON);
-        } else {
-            skeleton = (org.bukkit.entity.Skeleton) world.spawnEntity(
-                    spider.getLocation(),
-                    org.bukkit.entity.EntityType.SKELETON);
-        }
+    /** Clases 1 (cota de malla) y 5 (cuero rojo) son wither skeleton; 2, 3 y 4 esqueleto normal. */
+    private static boolean isWitherClass(int skeletonClass) {
+        return skeletonClass == 1 || skeletonClass == 5;
+    }
 
-        spider.addPassenger(skeleton);
+    private LivingEntity spawnClassSkeleton(org.bukkit.Location loc, int skeletonClass) {
+        LivingEntity skeleton = (LivingEntity) loc.getWorld().spawnEntity(loc,
+                isWitherClass(skeletonClass) ? org.bukkit.entity.EntityType.WITHER_SKELETON
+                        : org.bukkit.entity.EntityType.SKELETON);
         // Marcar que ya tiene clase asignada
         org.bukkit.NamespacedKey classKey = new org.bukkit.NamespacedKey(plugin, "skeleton_class");
         skeleton.getPersistentDataContainer().set(classKey, org.bukkit.persistence.PersistentDataType.INTEGER,
                 skeletonClass);
         equipSkeletonByClass(skeleton, skeletonClass);
+        return skeleton;
     }
 
     private void equipSkeletonByClass(LivingEntity skeletonEntity, int skeletonClass) {
@@ -797,36 +803,35 @@ public class DifficultyManager {
         }
     }
 
+    private static boolean isTamed(Mob mob) {
+        return mob instanceof org.bukkit.entity.Tameable t && t.isTamed();
+    }
+
     private void makeAggressive(Mob mob, double damage) {
-        // 1. Marcar al mob como "Agresivo" para no repetir esto
-        mob.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "is_aggressive"),
-                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        AggressiveMobGoal goal = new AggressiveMobGoal(mob, plugin, 20.0, damage);
+        if (org.bukkit.Bukkit.getMobGoals().hasGoal(mob, goal.getKey()))
+            return;
 
-        // 2. Configurar daño físico
-        try {
-            org.bukkit.attribute.AttributeInstance damageAttr = mob
-                    .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
-            if (damageAttr != null) {
-                damageAttr.setBaseValue(damage);
-            }
-        } catch (IllegalArgumentException ignored) {
+        org.bukkit.attribute.AttributeInstance damageAttr = mob
+                .getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+        if (damageAttr != null) {
+            damageAttr.setBaseValue(damage);
         }
 
-        // 3. Borrar la IA original (Pánico, Huir)
-        if (mob instanceof Animals || mob instanceof AbstractVillager || mob instanceof Fish || mob instanceof Dolphin
-                || mob instanceof Axolotl || mob instanceof Squid) {
-            org.bukkit.Bukkit.getMobGoals().removeAllGoals(mob);
-        }
-
-        // 4. Inyectar IA asesina (Prioridad 0)
-        org.bukkit.Bukkit.getMobGoals().addGoal(mob, 0, new AggressiveMobGoal(mob, plugin, 20.0, damage));
+        // Prioridad 0: mientras persigue le gana a huir/panico; sin jugador cerca conserva su IA normal (nadar,
+        // pasear)
+        org.bukkit.Bukkit.getMobGoals().addGoal(mob, 0, goal);
     }
 
     // Clase interna UNIFICADA para IA de ataque en cualquier Mob
     private static class AggressiveMobGoal implements com.destroystokyo.paper.entity.ai.Goal<Mob> {
         private final Mob entity;
         private final com.destroystokyo.paper.entity.ai.GoalKey<Mob> key;
+        private static final double CHASE_SPEED = 1.3;
         private int attackCooldown = 0;
+        private int pathTicks = 10;
+        // Victima propia: ajolotes (y otros mobs con brain) leen getTarget() de su brain e ignoran setTarget()
+        private LivingEntity victim;
         private final double range;
         private final double damage;
 
@@ -840,7 +845,10 @@ public class DifficultyManager {
 
         @Override
         public boolean shouldActivate() {
-            LivingEntity target = entity.getTarget();
+            if (isTamed(entity))
+                return false;
+
+            LivingEntity target = victim;
 
             // Si ya tiene un target válido, mantenerlo
             if (target != null && !target.isDead()) {
@@ -873,6 +881,7 @@ public class DifficultyManager {
             }
 
             if (nearestPlayer != null) {
+                victim = nearestPlayer;
                 entity.setTarget(nearestPlayer);
                 return true;
             }
@@ -882,9 +891,13 @@ public class DifficultyManager {
 
         @Override
         public boolean shouldStayActive() {
-            LivingEntity target = entity.getTarget();
+            LivingEntity target = victim;
 
-            if (target == null || target.isDead()) {
+            if (target == null || target.isDead() || isTamed(entity)) {
+                return false;
+            }
+
+            if (target.getWorld() != entity.getWorld()) {
                 return false;
             }
 
@@ -907,12 +920,14 @@ public class DifficultyManager {
         @Override
         public void start() {
             attackCooldown = 0;
+            pathTicks = 10;
         }
 
         @Override
         public void stop() {
             entity.getPathfinder().stopPathfinding();
             entity.setTarget(null);
+            victim = null;
         }
 
         @Override
@@ -921,7 +936,7 @@ public class DifficultyManager {
                 attackCooldown--;
             }
 
-            LivingEntity target = entity.getTarget();
+            LivingEntity target = victim;
             if (target == null)
                 return;
 
@@ -929,21 +944,20 @@ public class DifficultyManager {
 
             double distSq = entity.getLocation().distanceSquared(target.getLocation());
 
-            if (distSq > 1.0) {
-                entity.getPathfinder().moveTo(target);
+            // Recalcular el camino cada 10 ticks, no cada tick
+            if (distSq > 1.0 && ++pathTicks >= 10) {
+                pathTicks = 0;
+                entity.getPathfinder().moveTo(target, CHASE_SPEED);
             }
 
-            // Atacar si está cerca (3.0 bloques cuadrados = ~1.7 bloques de distancia)
-            if (distSq < 3.0 && attackCooldown == 0) {
+            // Atacar si está cerca (3.0 bloques cuadrados = ~1.7 bloques) y lo ve (no a través de paredes)
+            if (distSq < 3.0 && attackCooldown == 0 && entity.hasLineOfSight(target)) {
                 double finalDamage = damage;
-                // Intentar obtener daño del atributo si es mayor (por si el mob tiene fuerza)
-                try {
-                    org.bukkit.attribute.AttributeInstance attr = entity
-                            .getAttribute(org.bukkit.attribute.Attribute.valueOf("GENERIC_ATTACK_DAMAGE"));
-                    if (attr != null && attr.getValue() > finalDamage) {
-                        finalDamage = attr.getValue();
-                    }
-                } catch (Exception ignored) {
+                // Usar el daño del atributo si es mayor (por si el mob tiene fuerza)
+                org.bukkit.attribute.AttributeInstance attr = entity
+                        .getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+                if (attr != null && attr.getValue() > finalDamage) {
+                    finalDamage = attr.getValue();
                 }
 
                 target.damage(finalDamage, entity);
@@ -962,23 +976,6 @@ public class DifficultyManager {
         public java.util.EnumSet<com.destroystokyo.paper.entity.ai.GoalType> getTypes() {
             return java.util.EnumSet.of(com.destroystokyo.paper.entity.ai.GoalType.MOVE,
                     com.destroystokyo.paper.entity.ai.GoalType.LOOK);
-        }
-    }
-
-    private void makePigmanAngry(PigZombie pigman) {
-        org.bukkit.entity.Player nearestPlayer = null;
-        double nearestDistance = Double.MAX_VALUE;
-        for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
-            double distance = player.getLocation().distance(pigman.getLocation());
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestPlayer = player;
-            }
-        }
-        if (nearestPlayer != null) {
-            pigman.setAngry(true);
-            pigman.setAnger(Integer.MAX_VALUE);
-            pigman.setTarget(nearestPlayer);
         }
     }
 

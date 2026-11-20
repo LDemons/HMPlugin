@@ -50,10 +50,36 @@ public class PlayerListener implements Listener {
     private final java.util.Map<org.bukkit.Location, Long> transformCooldowns = new java.util.HashMap<>();
     private final java.util.Random random = new java.util.Random();
 
+    // Marca en el jugador: murio con vidas y todavia no volvio a supervivencia
+    private static NamespacedKey pendingRevive() {
+        return new NamespacedKey(HMPlugin.getInstance(), "pending_revive");
+    }
+
+    private static final String NO_LIVES_KICK = "<red><bold>TE QUEDASTE SIN VIDAS<br><br><yellow>Has perdido todas tus vidas.<br><gray>Contacta a un administrador para volver.";
+
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
-        e.joinMessage(MessageUtils.format("<gray>[<green>+<gray>] <yellow>" + e.getPlayer().getName()));
-        updateHealth(e.getPlayer());
+        Player p = e.getPlayer();
+        e.joinMessage(MessageUtils.format("<gray>[<green>+<gray>] <yellow>" + p.getName()));
+        updateHealth(p);
+        // Si se desconecto durante los 5 s de espectador tras morir, el paso a supervivencia nunca se aplico
+        if (p.getPersistentDataContainer().has(pendingRevive())
+                && HM.LuckyDemon.managers.LivesManager.getInstance().getLives(p) > 0) {
+            p.getPersistentDataContainer().remove(pendingRevive());
+            p.setGameMode(GameMode.SURVIVAL);
+            p.setHealth(p.getAttribute(Attribute.MAX_HEALTH).getValue());
+        }
+    }
+
+    // Sin vidas no se vuelve a entrar (los op si, para poder usar /hm resetlives)
+    @EventHandler
+    public void onPreLogin(org.bukkit.event.player.AsyncPlayerPreLoginEvent e) {
+        OfflinePlayer p = Bukkit.getOfflinePlayer(e.getUniqueId());
+        if (HMPlugin.getInstance().getConfig().getBoolean("game.ban_enabled", true) && !p.isOp()
+                && HM.LuckyDemon.managers.LivesManager.getInstance().getLives(p) <= 0) {
+            e.disallow(org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
+                    MessageUtils.format(NO_LIVES_KICK));
+        }
     }
 
     @EventHandler
@@ -683,6 +709,9 @@ public class PlayerListener implements Listener {
 
         HM.LuckyDemon.managers.LivesManager livesManager = HM.LuckyDemon.managers.LivesManager.getInstance();
         int remainingLives = livesManager.removeLife(player);
+        if (remainingLives > 0) {
+            player.getPersistentDataContainer().set(pendingRevive(), PersistentDataType.BOOLEAN, true);
+        }
 
         // Crear monumento de muerte solo cuando el jugador pierde todas sus vidas
         if (remainingLives == 0) {
@@ -822,8 +851,11 @@ public class PlayerListener implements Listener {
                 MessageUtils.send(player, "<yellow>Volverás al juego en 5 segundos...");
 
                 Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+                    if (!player.isOnline()) return; // onJoin lo devuelve a supervivencia al volver
+                    player.getPersistentDataContainer().remove(pendingRevive());
                     player.setGameMode(GameMode.SURVIVAL);
-                    player.setHealth(20.0);
+                    // Vida maxima real (el dia 40 son 12, con 20 fijo saltaba excepcion y no salia la animacion)
+                    player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
                     player.setFoodLevel(20);
                     player.setSaturation(20.0f);
 
@@ -842,8 +874,7 @@ public class PlayerListener implements Listener {
                     MessageUtils.send(player, "<gray>Te quedan 20 segundos para despedirte...");
                     // 20 s en espectador: titulo (5 s), animacion (~4 s) y un rato para mirar antes de la expulsion
                     Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
-                        player.kick(MessageUtils.format(
-                                "<red><bold>TE QUEDASTE SIN VIDAS<br><br><yellow>Has perdido todas tus vidas.<br><gray>Contacta a un administrador para volver."));
+                        player.kick(MessageUtils.format(NO_LIVES_KICK));
                     }, 400L);
                 }
             }
