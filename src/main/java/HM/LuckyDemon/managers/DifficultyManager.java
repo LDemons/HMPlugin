@@ -189,6 +189,14 @@ public class DifficultyManager {
         } else if (difficultyLevel >= 1) {
             applyBaseEffects(entity);
         }
+        // DÍA 20: Wardens el doble de rápidos (base fija, así aplicarlo dos veces no lo cuadruplica)
+        if (currentDay >= 20 && entity.getType() == EntityType.WARDEN) {
+            org.bukkit.attribute.AttributeInstance speed = entity
+                    .getAttribute(org.bukkit.attribute.Attribute.MOVEMENT_SPEED);
+            if (speed != null) {
+                speed.setBaseValue(speed.getDefaultValue() * 2);
+            }
+        }
         // Después del 30 para que el nombre del día 40 no lo pise el del 30
         if (currentDay >= 40) {
             applyDay40Effects(entity);

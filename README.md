@@ -6,11 +6,10 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 
 - 3 vidas por jugador. Al perder una sale una animacion de corazon roto (requiere el resource pack, que el plugin envia solo al entrar).
 - Sin vidas: permadeath y no puede volver a entrar (los op si).
-- Mensajes y sonido de muerte propios, cabeza del jugador al morir, corazones en el tab, menciones en el chat y avisos a Discord.
+- Mensajes y sonido de muerte propios, cabeza del jugador al morir, corazones en el tab, menciones en el chat (`@jugador`, `@everyone`) y avisos a Discord.
 - Sin PvP hasta el dia 40.
-- **Death Train**: al dormir se desata una tormenta que dura tantas horas como el dia actual (se reinicia cada 25 dias).
-- **Super Golden Apple +** (8 lingotes de oro + manzana dorada): Health Boost I 5 min.
-- **Hyper Golden Apple +** (8 bloques de oro + manzana dorada): +2 corazones permanentes, una sola vez por jugador.
+- **Death Train**: cada muerte desata (o alarga) una tormenta electrica. Dura tantas horas como el dia actual y la cuenta vuelve a 1 cada 25 dias (dia 26 = 1 h). Con tormenta no se puede dormir.
+- Portal al End bloqueado hasta el dia 30.
 
 ## Dia 1
 
@@ -19,38 +18,52 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 
 ## Dia 10
 
+- Para pasar la noche hay que ser al menos 4 jugadores conectados.
+- Aranas con 1 a 3 efectos aleatorios (Speed III, Fuerza IV, Salto V, Regeneracion IV, Resistencia III, Invisibilidad, Glowing o Caida Lenta).
 - Creaking con Fuerza I y Speed I.
 - 3% de que salga una arana de cueva al romper una vasija.
 
 ## Dia 20
 
-- Animales pasivos y marinos agresivos; los pigmans se enojan al verte.
-- Aranas con esqueleto jinete (5 clases).
+- La noche ya no se puede saltar (dormir solo reinicia el contador de los phantoms).
 - KeepInventory.
+- Animales pasivos, marinos y aldeanos agresivos (2 de dano); los pigmans se enojan al verte.
+- Aranas con 3 a 5 efectos y un esqueleto de clase encima.
+- **Phantom Gigante**: tamano 9 y vida x2.
+- Golems, pigmans, ghasts, guardianes, magma cubes, endermans, brujas, wither skeletons, evokers, phantoms, slimes, drowned y blazes no sueltan drops ni experiencia.
 - Ancient City con +64 de oro, cofres de Trial Chamber con +1 totem.
-- Bad Omen V (que da Weakness) al matar raiders.
-- Murcielagos dan ceguera; Wardens con el doble de velocidad.
-- Skeleton skull para craftear la manzana de Notch.
+- 50% de Bad Omen V (100 min) al matar raiders; el Bad Omen tambien da Weakness.
+- Los murcielagos dan ceguera 15 s al golpear.
+- Wardens el doble de rapidos.
+- Receta: skeleton skull + 8 bloques de oro = manzana de Notch.
 
 ## Dia 25
 
+- Durante el Death Train todos los mobs hostiles tienen Fuerza I, Speed I y Resistencia I.
+- Aranas con 5 efectos.
 - Creaking con Fuerza II y Speed III.
-- Giga Slimes y Giga Magma Cubes.
-- Ghasts Demoniacos.
-- Ravagers (1% de soltar totem).
-- Armadura Infernal.
+- **Creeper Electrico** (todos los creepers).
+- **Giga Slime** (tamano 15, vida x2) y **Giga Magma Cube** (tamano 16).
+- **Ghast Demoniaco**: 40-60 de vida y explosiones mas fuertes.
+- **Ravager Elite**: Fuerza II, Speed I, 1% de soltar totem.
+- **Armadura Infernal** (solo dias 25 a 29): Botas por Ghast Demoniaco (30%), Pechera por Giga Slime chico (20%), Pantalones por Giga Magma Cube chico (20%), Casco por arana de cueva (30%). El set completo da +4 corazones.
 
 ## Dia 30
 
 Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 
-- Creepers electricos, Pillagers Invisibles, Pigmans Blindados (diamante).
-- Calamares pasan a guardianes, murcielagos a blazes, piglins a hoglins.
-- Allays invisibles con TNT, shulkers explosivos.
-- Ender Creepers y Ender Ghasts (en el End reemplazan al 1% de los endermans y sale uno al romper cada cristal de los pilares).
-- Esqueletos con clase aleatoria: Tactico, Infernal, Guerrero, Asesino, Pesadilla (Infernal y Pesadilla son wither skeletons).
+- Pisar bedrock te lanza por los aires.
+- **Pillager Invisible** con ballesta Quick Charge X.
+- **Pigman Blindado** (armadura de diamante).
+- Murcielagos: 30% pasan a **Blaze Infernal** (Resistencia II), el resto no aparece.
+- Calamares: 30% pasan a **Guardian Acuatico** (Speed II), el resto no aparece.
+- Piglins -> **Hoglin Salvaje**.
+- **Allay Explosivo**: invisible, el doble de grande, Speed II, TNT en mano; explota al tocarte o al morir.
+- **Shulker Explosivo**: sus balas y su muerte dejan TNT (shulker shells al 20%).
+- **Ender Creeper** (End): electrico, invisible y esquiva las flechas teletransportandose.
+- **Ender Ghast** (End): reemplaza al 1% de los endermans y sale uno al romper cada cristal de los pilares.
+- Esqueletos con clase aleatoria: Tactico, Infernal, Guerrero, Asesino, Pesadilla (Tactico y Pesadilla son wither skeletons). Llevan flechas de Dano II.
 - **Zombie Jinete**: los zombies salen montados en un caballo zombie.
-- Phantom Gigante.
 - Golems con Speed IV, endermans con Fuerza II, silverfish con 5 efectos.
 - Totems con 1% de fallo.
 
@@ -60,13 +73,15 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - PvP activado.
 - Vida maxima -4 corazones.
 - Totems con 3% de fallo y gastan 2.
-- 5 slots del inventario bloqueados (los libera la Reliquia del Fin, crafteable solo desde el dia 40).
+- 5 slots del inventario bloqueados (los libera la **Reliquia del Fin**: shulker shells, bloques de diamante y tinte celeste).
+- **Super Golden Apple +** (8 lingotes de oro + manzana dorada): Health Boost I 5 min.
+- **Hyper Golden Apple +** (8 bloques de oro + manzana dorada): Regeneracion III 30 s, Absorcion III 2 min y +2 corazones permanentes (estos solo una vez por jugador).
 - Antorchas no crafteables.
 - Ceguera 1 min muy de vez en cuando bajo la lluvia a cielo abierto.
 - Dano x4 al pisar magma o al recibir dano de un Sulfur Cube.
 
 **Mundo y loot**
-- Generacion de estructuras desactivada.
+- Generacion de estructuras desactivada (al reiniciar).
 - Elytras casi rotas en los End Ships.
 - 9 chorus flowers = dragon's breath.
 - Shulker shells al 2%; receta Shulker Box -> 2 Shulker Shells.

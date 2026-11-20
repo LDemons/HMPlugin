@@ -38,6 +38,16 @@ public class Day40CraftListener implements Listener {
         }
     }
 
+    /** Super y Hyper Golden Apple + se habilitan el día 40. */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onGoldenApplePlus(PrepareItemCraftEvent e) {
+        if (e.getRecipe() instanceof org.bukkit.Keyed keyed
+                && (keyed.getKey().getKey().equals("super_gap") || keyed.getKey().getKey().equals("hyper_gap"))
+                && GameManager.getInstance().getDay() < 40) {
+            e.getInventory().setResult(null);
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareCraft(PrepareItemCraftEvent e) {
         // Solo aplicar desde día 40
