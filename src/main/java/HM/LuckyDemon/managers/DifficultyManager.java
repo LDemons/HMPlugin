@@ -617,8 +617,17 @@ public class DifficultyManager {
             // Si está en el Nether, ya tiene efectos de Ghast Demoníaco (día 25)
         }
 
+        // DÍA 30: Zombies montados en caballo zombie (solo si cabe el jinete, para que no se asfixie en cuevas)
+        if (entity.getType() == EntityType.ZOMBIE && entity.getVehicle() == null
+                && entity.getLocation().add(0, 2, 0).getBlock().isPassable()) {
+            ZombieHorse horse = entity.getWorld().spawn(entity.getLocation(), ZombieHorse.class);
+            horse.setRemoveWhenFarAway(true); // si no, quedan caballos sueltos cuando el zombie despawnea
+            horse.addPassenger(entity);
+            setSpecialName(entity, "Zombie Jinete", net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
+        }
+
         // DÍA 30: Todos los esqueletos tienen clase aleatoria
-        if (entity instanceof org.bukkit.entity.Skeleton || entity instanceof org.bukkit.entity.WitherSkeleton) {
+        if (entity instanceof org.bukkit.entity.Skeleton ||entity instanceof org.bukkit.entity.WitherSkeleton) {
             // Verificar si ya tiene una clase asignada (para no sobrescribir jinetes de
             // arañas)
             org.bukkit.NamespacedKey classKey = new org.bukkit.NamespacedKey(plugin, "skeleton_class");
