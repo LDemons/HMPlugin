@@ -98,8 +98,38 @@ public class DifficultyManager {
                             && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
                         continue;
 
+                    // DÍA 40: ceguera 1 min bajo la lluvia. La tarea corre cada 2 s: 1/5000 = 1/10000 por segundo
+                    if (currentDay >= 40 && player.getWorld().hasStorm()
+                            && player.getLocation().getBlockY() >= player.getWorld()
+                                    .getHighestBlockYAt(player.getLocation())
+                            && random.nextInt(5000) == 0) {
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20 * 60, 0));
+                    }
+
+                    // DÍA 40: Ravagers de Granja que ya tuvieron un jugador a 96 bloques vuelven a despawnear lejos
+                    if (currentDay >= 40) {
+                        org.bukkit.NamespacedKey farmKey = new org.bukkit.NamespacedKey(plugin, "farm_ravager");
+                        for (Ravager ravager : player.getLocation().getNearbyEntitiesByType(Ravager.class, 96)) {
+                            if (!ravager.getRemoveWhenFarAway() && ravager.getPersistentDataContainer()
+                                    .has(farmKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                                ravager.setRemoveWhenFarAway(true);
+                            }
+                        }
+                    }
+
                     // Escanear entidades cercanas (15 bloques)
                     for (org.bukkit.entity.Entity entity : player.getNearbyEntities(15, 15, 15)) {
+                        // DÍA 40: endermans hostiles van por el jugador sin que los mires
+                        if (entity instanceof Enderman enderman && enderman.getPersistentDataContainer().has(
+                                new org.bukkit.NamespacedKey(plugin, "hostile_enderman"),
+                                org.bukkit.persistence.PersistentDataType.BYTE)) {
+                            if (enderman.getTarget() == null || !enderman.getTarget().isValid()) {
+                                enderman.setTarget(player);
+                            }
+                            continue;
+                        }
+
+
                         // Pigmans siempre enojados con el jugador que tengan cerca
                         if (entity instanceof PigZombie pigman) {
                             if (pigman.getTarget() == null || !pigman.getTarget().isValid()) {
@@ -147,6 +177,9 @@ public class DifficultyManager {
     // ========== EFECTOS A MOBS ==========
 
     public void applyMobEffects(LivingEntity entity) {
+        if (currentDay >= 40 && replaceDay40Mob(entity)) {
+            return; // Reemplazado por otro mob (ya se le aplicaron sus efectos)
+        }
         if (currentDay >= 30) {
             applyDay30Effects(entity);
         } else if (currentDay >= 25) {
@@ -156,6 +189,18 @@ public class DifficultyManager {
         } else if (difficultyLevel >= 1) {
             applyBaseEffects(entity);
         }
+        // Después del 30 para que el nombre del día 40 no lo pise el del 30
+        if (currentDay >= 40) {
+            applyDay40Effects(entity);
+        }
+    }
+
+    /** Nombre de mob especial (desde el día 30 cada mob modificado lleva el suyo). Oculto, sale en las muertes. */
+    private static void setSpecialName(LivingEntity entity, String name,
+            net.kyori.adventure.text.format.NamedTextColor color) {
+        entity.customName(net.kyori.adventure.text.Component.text(name).color(color)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+        entity.setCustomNameVisible(false);
     }
 
     private void applyBaseEffects(LivingEntity entity) {
@@ -270,6 +315,228 @@ public class DifficultyManager {
         if (entity instanceof org.bukkit.entity.Creeper) {
             makeCreperCharged((org.bukkit.entity.Creeper) entity);
         }
+    }
+
+    // ========== MECÁNICAS DÍA 40 ==========
+
+    private static final int HOSTILE_ENDERMAN_PERCENT = 10;
+
+    /** DÍA 40: cambia el mob por otro. Devuelve true si lo reemplazó. Corre antes de los efectos del 30. */
+    private boolean replaceDay40Mob(LivingEntity entity) {
+        if (entity.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(plugin, "transformed_mob"),
+                org.bukkit.persistence.PersistentDataType.BYTE)) {
+            return false;
+        }
+        // getType() y no instanceof: CaveSpider es Spider y Husk/Drowned son Zombie (se reemplazarían en bucle)
+        switch (entity.getType()) {
+            case SPIDER -> replaceMob(entity, EntityType.CAVE_SPIDER); // el nombre se lo pone applyDay40Effects
+            case ZOMBIE -> {
+                LivingEntity vindicator = replaceMob(entity, EntityType.VINDICATOR);
+                vindicator.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 0));
+                org.bukkit.attribute.AttributeInstance maxHealth = vindicator
+                        .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                maxHealth.setBaseValue(maxHealth.getBaseValue() * 2);
+                vindicator.setHealth(maxHealth.getBaseValue());
+                setSpecialName(vindicator, "Vindicator Furioso", net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
+            }
+            case WOLF -> replaceMob(entity, EntityType.CAT); // el gato sale Supernova (applyDay40Effects)
+            case NAUTILUS -> replaceMob(entity, EntityType.ZOMBIE_NAUTILUS); // el Drowned se lo pone applyDay40Effects
+            case COW, MOOSHROOM, SHEEP, PIG, CHICKEN -> {
+                LivingEntity ravager = replaceMob(entity, EntityType.RAVAGER);
+                // Los chunks nuevos se generan a ~160 bloques y un monstruo a más de 128 de un jugador se borra al
+                // instante: nace sin despawn y el escáner se lo devuelve cuando un jugador pasa cerca
+                ravager.setRemoveWhenFarAway(false);
+                ravager.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "farm_ravager"),
+                        org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                setSpecialName(ravager, "Ravager de Granja", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+            }
+            case ENDERMAN -> {
+                if (entity.getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
+                    return false;
+                }
+                applyEnderCreeperEffects((Creeper) replaceMob(entity, EntityType.CREEPER));
+            }
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** DÍA 40: buffs y nombres. Corre después de los efectos del 30. */
+    private void applyDay40Effects(LivingEntity entity) {
+        int forever = Integer.MAX_VALUE;
+        switch (entity.getType()) {
+            case ENDERMAN -> {
+                if (random.nextInt(100) < HOSTILE_ENDERMAN_PERCENT) {
+                    entity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "hostile_enderman"),
+                            org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                    setSpecialName(entity, "Enderman Hostil", net.kyori.adventure.text.format.NamedTextColor.DARK_RED);
+                }
+            }
+            case CREEPER -> {
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, forever, 1));
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, forever, 1));
+            }
+            case IRON_GOLEM -> entity.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, forever, 0));
+            case GUARDIAN, ELDER_GUARDIAN -> {
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, forever, 2));
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, forever, 1));
+            }
+            case PHANTOM -> {
+                if (entity.getPassengers().isEmpty()) {
+                    entity.addPassenger(spawnClassSkeleton(entity.getLocation(), random.nextInt(5) + 1));
+                }
+                setSpecialName(entity, "Phantom Jinete", net.kyori.adventure.text.format.NamedTextColor.DARK_BLUE);
+            }
+            case CAVE_SPIDER -> setSpecialName(entity, "Araña de Cueva Jinete",
+                    net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE);
+            case CAT, OCELOT -> makeSupernovaCat(entity);
+            case RABBIT -> {
+                // 1 de vida pero Speed 50 y 10 de daño (AggressiveMobGoal usa el atributo si pasa de 2)
+                entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(1);
+                entity.setHealth(1);
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, forever, 49));
+                if (entity.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE) == null) {
+                    entity.registerAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+                }
+                entity.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE).setBaseValue(10);
+            }
+            case ARMADILLO -> {
+                // 300 de vida; al morir suelta un stack de Blaze Rod o de bloques de Lapis (Day40MobListener)
+                entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(300);
+                entity.setHealth(300);
+                entity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "rich_armadillo"),
+                        org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                setSpecialName(entity, "Armadillo Acorazado", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+            }
+            case SULFUR_CUBE -> {
+                ((SulfurCube) entity).setEquipped(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MAGMA_BLOCK));
+                setSpecialName(entity, "Sulfur Cube Ardiente", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+            }
+            case ZOMBIE_NAUTILUS -> {
+                if (entity.getPassengers().isEmpty()) {
+                    entity.addPassenger(entity.getWorld().spawnEntity(entity.getLocation(), EntityType.DROWNED));
+                }
+                setSpecialName(entity, "Nautilus Zombie Jinete", net.kyori.adventure.text.format.NamedTextColor.DARK_AQUA);
+            }
+            case WITCH -> {
+                // Pociones: Day40MobListener
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, forever, 1));
+                org.bukkit.attribute.AttributeInstance maxHealth = entity
+                        .getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                maxHealth.setBaseValue(maxHealth.getBaseValue() * 2);
+                entity.setHealth(maxHealth.getBaseValue());
+                setSpecialName(entity, "Bruja Imposible", net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE);
+            }
+            case GHAST -> {
+                // 75% de los Ghasts Demoníacos (los del End son Ender Ghast). Bolas: Day40MobListener
+                if (entity.getWorld().getEnvironment() != org.bukkit.World.Environment.THE_END
+                        && random.nextInt(100) < 75) {
+                    entity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "floating_demon"),
+                            org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                    setSpecialName(entity, "Demonio Flotante", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+                }
+            }
+            case ZOMBIFIED_PIGLIN -> {
+                if (random.nextInt(100) < MOUNTED_PIGMAN_PERCENT) {
+                    mountPigman(entity);
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int MOUNTED_PIGMAN_PERCENT = 5;
+
+    /** DÍA 40: Pigman montado en Cerdo, Abeja, Ghast o Magma Cube (25% cada uno). */
+    private void mountPigman(LivingEntity pigman) {
+        org.bukkit.Location loc = pigman.getLocation();
+        String name;
+        LivingEntity mount;
+        switch (random.nextInt(4)) {
+            case 0 -> {
+                mount = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.PIG);
+                name = "Pigman Jinete de Cerdo";
+            }
+            case 1 -> {
+                Bee bee = (Bee) loc.getWorld().spawnEntity(loc, EntityType.BEE);
+                bee.setAnger(Integer.MAX_VALUE);
+                mount = bee;
+                name = "Pigman Jinete de Abeja";
+                // Armadura de cuero amarilla en vez de la de diamante (como en el original)
+                org.bukkit.inventory.EntityEquipment eq = pigman.getEquipment();
+                org.bukkit.Material[] pieces = { org.bukkit.Material.LEATHER_HELMET,
+                        org.bukkit.Material.LEATHER_CHESTPLATE, org.bukkit.Material.LEATHER_LEGGINGS,
+                        org.bukkit.Material.LEATHER_BOOTS };
+                org.bukkit.inventory.ItemStack[] armor = new org.bukkit.inventory.ItemStack[4];
+                for (int i = 0; i < 4; i++) {
+                    armor[i] = new org.bukkit.inventory.ItemStack(pieces[i]);
+                    armor[i].editMeta(org.bukkit.inventory.meta.LeatherArmorMeta.class,
+                            m -> m.setColor(org.bukkit.Color.YELLOW));
+                }
+                eq.setHelmet(armor[0]);
+                eq.setChestplate(armor[1]);
+                eq.setLeggings(armor[2]);
+                eq.setBoots(armor[3]);
+            }
+            case 2 -> {
+                mount = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.GHAST);
+                name = "Pigman Jinete de Ghast";
+                pigman.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 3));
+                pigman.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE).setBaseValue(8.0);
+            }
+            default -> {
+                MagmaCube cube = (MagmaCube) loc.getWorld().spawnEntity(loc, EntityType.MAGMA_CUBE);
+                cube.setSize(1);
+                mount = cube;
+                name = "Pigman Jinete de Magma";
+            }
+        }
+        mount.addPassenger(pigman);
+        setSpecialName(pigman, name, net.kyori.adventure.text.format.NamedTextColor.GOLD);
+    }
+
+    // Potencia 200 como el original: congela el server unos segundos al explotar (Nacho lo quiere así)
+    private static final float SUPERNOVA_POWER = 200f;
+    private final java.util.Set<java.util.UUID> supernovaCats = new java.util.HashSet<>();
+
+    /** DÍA 40: Gato Supernova. Se anuncia y explota a los 30 s si sigue vivo. Máximo 2 a la vez. */
+    private void makeSupernovaCat(LivingEntity cat) {
+        if (supernovaCats.contains(cat.getUniqueId())) {
+            return;
+        }
+        if (Bukkit.getOnlinePlayers().isEmpty() || supernovaCats.size() >= 2) {
+            cat.remove();
+            return;
+        }
+        supernovaCats.add(cat.getUniqueId());
+        setSpecialName(cat, "Gato Supernova", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+
+        org.bukkit.Location loc = cat.getLocation();
+        org.bukkit.Chunk chunk = loc.getChunk();
+        chunk.addPluginChunkTicket(plugin); // que no se descargue antes de explotar
+        Bukkit.broadcast(HM.LuckyDemon.utils.MessageUtils.format("<red>Un Gato Supernova va a explotar en: "
+                + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() + " (" + loc.getWorld().getName() + ")"));
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            supernovaCats.remove(cat.getUniqueId());
+            chunk.removePluginChunkTicket(plugin);
+            if (!cat.isValid()) {
+                return; // lo mataron a tiempo
+            }
+            cat.getWorld().createExplosion(cat.getLocation(), SUPERNOVA_POWER, true, true, cat);
+            cat.remove();
+        }, 20L * 30);
+    }
+
+    /** Cambia un mob por otro del tipo dado en el mismo lugar y le aplica los efectos del día. */
+    private LivingEntity replaceMob(LivingEntity old, EntityType type) {
+        LivingEntity mob = (LivingEntity) old.getWorld().spawnEntity(old.getLocation(), type);
+        old.remove();
+        applyMobEffects(mob);
+        return mob;
     }
 
     private void applyDay30Effects(LivingEntity entity) {
@@ -575,6 +842,17 @@ public class DifficultyManager {
                 entity.setCustomNameVisible(false);
             }
         }
+
+        // Mobs especiales del 20-30 que no tenían nombre (los que solo llevan pociones no cuentan)
+        String name = switch (entity.getType()) {
+            case PHANTOM -> "Phantom Gigante";
+            case PILLAGER -> "Pillager Invisible";
+            case ZOMBIFIED_PIGLIN -> "Pigman Blindado";
+            default -> null;
+        };
+        if (name != null) {
+            setSpecialName(entity, name, net.kyori.adventure.text.format.NamedTextColor.RED);
+        }
     }
 
     private void applySpiderEffects(Spider spider) {
@@ -665,6 +943,10 @@ public class DifficultyManager {
         org.bukkit.inventory.EntityEquipment equipment = skeletonEntity.getEquipment();
         if (equipment == null)
             return;
+
+        setSpecialName(skeletonEntity, new String[] { "Esqueleto Táctico", "Esqueleto Infernal", "Esqueleto Guerrero",
+                "Esqueleto Asesino", "Esqueleto Pesadilla" }[skeletonClass - 1],
+                net.kyori.adventure.text.format.NamedTextColor.GRAY);
 
         if (skeletonClass == 1) {
             // ESQUELETO TÁCTICO - Wither - Cota Malla - Punch 30 + Power 25 - 20❤
@@ -1011,8 +1293,8 @@ public class DifficultyManager {
             spider.addPotionEffect(new PotionEffect(effectType, duration, amplifier));
         }
 
-        // Solo spawnear skeleton si NO es una araña de cueva
-        if (!(spider instanceof org.bukkit.entity.CaveSpider)) {
+        // Arañas de cueva sin jinete, salvo desde el día 40 (todas las arañas pasan a ser de cueva)
+        if (!(spider instanceof org.bukkit.entity.CaveSpider) || currentDay >= 40) {
             spawnSkeletonRider(spider);
         }
     }

@@ -17,6 +17,24 @@ public class RecipeManager {
                 registerGaps();
                 registerSkullToNotch(); // DÍA 20
                 registerChorusToDragonBreath(); // DÍA 40
+                registerShulkerBoxToShells(); // DÍA 40 (Day40CraftListener la bloquea antes del 40 o con la caja llena)
+        }
+
+        public static final String SHULKER_SHELLS_KEY = "shulker_box_to_shells";
+
+        /**
+         * DÍA 40: Shulker Box (cualquier color) → 2 Shulker Shells
+         */
+        private static void registerShulkerBoxToShells() {
+                NamespacedKey key = new NamespacedKey(HMPlugin.getInstance(), SHULKER_SHELLS_KEY);
+                org.bukkit.inventory.ShapelessRecipe recipe = new org.bukkit.inventory.ShapelessRecipe(key,
+                                new ItemStack(Material.SHULKER_SHELL, 2));
+                recipe.addIngredient(new org.bukkit.inventory.RecipeChoice.MaterialChoice(
+                                org.bukkit.Tag.SHULKER_BOXES));
+
+                if (HMPlugin.getInstance().getServer().getRecipe(key) == null) {
+                        HMPlugin.getInstance().getServer().addRecipe(recipe);
+                }
         }
 
         private static void registerInfernalArmor() {
@@ -111,12 +129,7 @@ public class RecipeManager {
                                 'A', Material.GOLDEN_APPLE);
 
                 // Super Golden Apple (Lingotes de oro + Manzana dorada)
-                ItemStack superGap = new ItemBuilder(Material.GOLDEN_APPLE)
-                                .name("<gold>Super Golden Apple +")
-                                .pdc("gap_type", "super")
-                                .build();
-
-                registerShaped("super_gap", superGap,
+                registerShaped("super_gap", HMItems.createSuperGoldenApple(),
                                 "GGG",
                                 "GAG",
                                 "GGG",

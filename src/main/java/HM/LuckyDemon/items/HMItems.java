@@ -11,6 +11,14 @@ import org.bukkit.inventory.ItemStack;
 public class HMItems {
 
     // --- Reliquias y Orbes ---
+    /** Super Golden Apple + (Health Boost I 5 min, ver PlayerListener). */
+    public static ItemStack createSuperGoldenApple() {
+        return new ItemBuilder(Material.GOLDEN_APPLE)
+                .name("<gold>Super Golden Apple +")
+                .pdc("gap_type", "super")
+                .build();
+    }
+
     public static ItemStack createEndRelic() {
         return new ItemBuilder(Material.LIGHT_BLUE_DYE)
                 .name("<gold>Reliquia del Fin")

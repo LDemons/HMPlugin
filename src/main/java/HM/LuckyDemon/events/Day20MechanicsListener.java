@@ -99,11 +99,13 @@ public class Day20MechanicsListener implements Listener {
         if (killer == null)
             return;
 
-        // 50% chance de Bad Omen nivel 5
-        if (random.nextBoolean()) {
+        // Bad Omen nivel 5: 50% de chance; 1 de 5 desde el día 40
+        boolean day40 = GameManager.getInstance().getDay() >= 40;
+        if (day40 ? random.nextInt(5) == 0 : random.nextBoolean()) {
             killer.addPotionEffect(new PotionEffect(
                     PotionEffectType.BAD_OMEN,
-                    20 * 60 * 100, // 100 minutos
+                    // 100 minutos; 10 desde el día 40 (los zombies pasan a vindicators y salía todo el rato)
+                    20 * 60 * (day40 ? 10 : 100),
                     4)); // Nivel 5 (amplifier = 4)
         }
     }

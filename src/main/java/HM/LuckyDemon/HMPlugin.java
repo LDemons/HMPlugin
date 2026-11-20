@@ -68,6 +68,7 @@ public class HMPlugin extends JavaPlugin {
         // DÍA 40+: Slots bloqueados y crafteo de antorchas
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40InventoryListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40CraftListener(), this);
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40MobListener(), this);
 
         // DÍA 40+: Modificaciones de loot
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40LootListener(), this);

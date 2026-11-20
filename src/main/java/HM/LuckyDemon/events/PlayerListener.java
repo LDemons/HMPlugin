@@ -286,7 +286,12 @@ public class PlayerListener implements Listener {
                         Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc, EntityType.GUARDIAN);
                         guardian.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
                         guardian.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
-                        guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                        // Día 40: Speed III y Resistencia II
+                        guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE,
+                                currentDay >= 40 ? 2 : 1));
+                        if (currentDay >= 40) {
+                            guardian.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
+                        }
                         guardian.customName(net.kyori.adventure.text.Component.text("Guardián Acuático")
                                 .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
                                 .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
@@ -331,17 +336,14 @@ public class PlayerListener implements Listener {
             }
         }
 
-        // SPAWNS ESPECIALES EN EL END (DÍA 30+)
-        if (currentDay >= 30 && e.getLocation().getWorld().getEnvironment() == org.bukkit.World.Environment.THE_END) {
-            // Spawn Ender Ghast (2% probabilidad)
-            if (random.nextInt(100) < 2 && e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+        // SPAWNS ESPECIALES EN EL END (DÍA 30+). Solo reemplaza endermans (antes podía tocarle al dragón)
+        if (currentDay >= 30 && e.getEntity() instanceof Enderman
+                && e.getLocation().getWorld().getEnvironment() == org.bukkit.World.Environment.THE_END) {
+            // Spawn Ender Ghast (1% de los endermans; los cristales de los pilares sacan más)
+            if (random.nextInt(100) < 1) {
                 Location loc = e.getLocation();
                 e.setCancelled(true);
-
-                Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
-                    Ghast enderGhast = (Ghast) loc.getWorld().spawnEntity(loc, EntityType.GHAST);
-                    HMPlugin.getInstance().getDifficultyManager().applyMobEffects(enderGhast);
-                }, 2L);
+                Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> spawnEnderGhast(loc), 2L);
                 return;
             }
 
@@ -365,6 +367,49 @@ public class PlayerListener implements Listener {
                 HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
             }
         }, 1L);
+    }
+
+    /**
+     * Mobs que nacen con un chunk nuevo (casi todos los animales): Paper los mete en el chunk sin lanzar
+     * CreatureSpawnEvent, así que se procesan al cargar el chunk nuevo, cuando ya están en el mundo.
+     */
+    @EventHandler
+    public void onNewChunkLoad(org.bukkit.event.world.ChunkLoadEvent e) {
+        if (!e.isNewChunk()) {
+            return;
+        }
+        org.bukkit.Chunk chunk = e.getChunk();
+        NamespacedKey transformedKey = new NamespacedKey(HMPlugin.getInstance(), "transformed_mob");
+        // shortcut: 2 ticks a ojo para que las entidades del chunk ya estén cargadas; subir si alguna se escapa
+        Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
+            if (!chunk.isLoaded()) {
+                return;
+            }
+            for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
+                // Los ya procesados (spawn natural en esos 2 ticks) llevan la marca del día 30
+                if (entity instanceof LivingEntity living && !(entity instanceof Player) && living.isValid()
+                        && !living.getPersistentDataContainer().has(transformedKey, PersistentDataType.BYTE)) {
+                    HMPlugin.getInstance().getDifficultyManager().applyMobEffects(living);
+                }
+            }
+        }, 2L);
+    }
+
+    private void spawnEnderGhast(Location loc) {
+        Ghast enderGhast = (Ghast) loc.getWorld().spawnEntity(loc, EntityType.GHAST);
+        HMPlugin.getInstance().getDifficultyManager().applyMobEffects(enderGhast);
+    }
+
+    /** DÍA 30+: al romper un cristal de los pilares del dragón (sobre bedrock) sale un Ender Ghast encima. */
+    @EventHandler(ignoreCancelled = true)
+    public void onEndCrystalExplode(org.bukkit.event.entity.EntityExplodeEvent e) {
+        if (e.getEntityType() != EntityType.END_CRYSTAL || GameManager.getInstance().getDay() < 30
+                || e.getLocation().getWorld().getEnvironment() != org.bukkit.World.Environment.THE_END
+                || e.getLocation().getBlock().getRelative(org.bukkit.block.BlockFace.DOWN)
+                        .getType() != org.bukkit.Material.BEDROCK) {
+            return;
+        }
+        spawnEnderGhast(e.getLocation().clone().add(0, 10, 0));
     }
 
     /**
