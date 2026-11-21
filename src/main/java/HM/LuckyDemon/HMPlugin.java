@@ -73,6 +73,9 @@ public class HMPlugin extends JavaPlugin {
         // DÍA 40+: Modificaciones de loot
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40LootListener(), this);
 
+        // Logros propios
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.AchievementListener(), this);
+
         // Resource pack (animacion de corazon perdido)
         resourcePackServer = new HM.LuckyDemon.utils.ResourcePackServer();
         if (resourcePackServer.start()) {

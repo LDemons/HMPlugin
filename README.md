@@ -106,6 +106,14 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Conejos con 1 de vida, Speed 50 y 10 de dano.
 - Ranas: al comerse un slime sueltan 5 Super Golden Apple +, al comerse un magma cube 5 manzanas de Notch.
 
+## Logros
+
+Salen en el menu de logros (tecla L), pestana **HM**.
+- **¿Quién necesita ver?**: mata a un mob hostil mientras estas ciego por un murcielago (dia 20+).
+- **Ahorro de Espacio**: sobrevive 2 dias seguidos desde el dia 40 sin tener la Reliquia del Fin.
+- **No es mi Día**: ten Hambre, Debilidad y Ceguera a la vez.
+- **Duro como la piedra**: sobrevive a 3 explosiones en menos de 1 minuto.
+
 ## Comandos
 
 - `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`.
