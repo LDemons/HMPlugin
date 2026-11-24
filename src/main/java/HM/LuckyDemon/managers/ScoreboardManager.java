@@ -1,6 +1,9 @@
 package HM.LuckyDemon.managers;
 
 import HM.LuckyDemon.HMPlugin;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.object.ObjectContents;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Criteria;
@@ -72,6 +75,31 @@ public class ScoreboardManager {
         if (scoreboard != null) {
             player.setScoreboard(scoreboard);
         }
+        updateTabName(player);
+    }
+
+    /** Cabeza con la skin + corazon de vidas + nombre, en el tab. */
+    public void updateTabName(Player player) {
+        player.playerListName(prefix(player).append(Component.text(player.getName())));
+    }
+
+    /**
+     * Cabeza con la skin y corazon del color de las vidas (verde 3, amarillo 2, rojo 1, gris 0).
+     * El server es offline-mode: el tab no dibuja cabezas solo, por eso va como objeto de texto.
+     */
+    public static Component prefix(Player player) {
+        int lives = LivesManager.getInstance().getLives(player);
+        NamedTextColor color = lives >= 3 ? NamedTextColor.GREEN
+                : lives == 2 ? NamedTextColor.YELLOW
+                : lives == 1 ? NamedTextColor.RED
+                : NamedTextColor.GRAY;
+        // Sin texturas (offline-mode sin plugin de skins) solo el nombre: el cliente busca la skin en Mojang
+        ObjectContents head = player.getPlayerProfile().hasTextures()
+                ? ObjectContents.playerHead(player)
+                : ObjectContents.playerHead(player.getName());
+        return Component.object(head)
+                .append(Component.text(" ❤ ", color))
+                .colorIfAbsent(NamedTextColor.WHITE);
     }
 
     /**

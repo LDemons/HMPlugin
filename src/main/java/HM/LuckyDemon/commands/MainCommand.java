@@ -49,6 +49,32 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     "<yellow>/hm resetdifficulty <white>- Resetea la dificultad y el día <gray>(Solo OP)");
             MessageUtils.send(player,
                     "<yellow>/hm resethealth <white>- Resetea tu vida a 10 corazones <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm beginning [tp] <white>- Dónde está el portal a The Beginning <gray>(Solo OP)");
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("beginning")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+            HM.LuckyDemon.beginning.BeginningManager bm = HM.LuckyDemon.HMPlugin.getInstance().getBeginningManager();
+            org.bukkit.Location portal = bm.getOverworldPortal();
+            if (portal == null) {
+                MessageUtils.send(player, "<red>The Beginning todavía no existe (aparece el día "
+                        + HM.LuckyDemon.beginning.BeginningManager.CREATE_DAY + ").");
+                return true;
+            }
+            if (args.length > 1 && args[1].equalsIgnoreCase("tp")) {
+                player.teleport(portal);
+            }
+            String estado = bm.isClosed() ? "<red>cerrado (Death Train)"
+                    : GameManager.getInstance().getDay() < HM.LuckyDemon.beginning.BeginningManager.ENTER_DAY
+                            ? "<red>se entra el día " + HM.LuckyDemon.beginning.BeginningManager.ENTER_DAY
+                            : "<green>abierto";
+            MessageUtils.send(player, "<light_purple>Portal a The Beginning: <white>" + portal.getBlockX() + " "
+                    + portal.getBlockY() + " " + portal.getBlockZ() + " <gray>(" + estado + "<gray>)");
             return true;
         }
 
@@ -62,6 +88,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             player.getInventory().addItem(HMItems.createEndRelic());
             player.getInventory().addItem(HMItems.craftInfernalHelmet());
             player.getInventory().addItem(HMItems.craftInfernalChestplate());
+            player.getInventory().addItem(HMItems.createInfernalNetherite().asQuantity(8));
 
             MessageUtils.send(player, "<green>¡Ítems entregados! Revisa tu inventario.");
             return true;
@@ -303,10 +330,10 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 double stormHours = Double.parseDouble(args[1]);
                 int ticksToReduce = (int) (stormHours * 3600 * 20);
 
-                if (player.getWorld().hasStorm()) {
-                    int currentDuration = player.getWorld().getWeatherDuration();
+                if (Bukkit.getWorlds().get(0).hasStorm()) {
+                    int currentDuration = Bukkit.getWorlds().get(0).getWeatherDuration();
                     int newDuration = Math.max(0, currentDuration - ticksToReduce);
-                    player.getWorld().setWeatherDuration(newDuration);
+                    Bukkit.getWorlds().get(0).setWeatherDuration(newDuration);
 
                     double remainingHours = newDuration / 20.0 / 3600.0;
                     MessageUtils.send(player, "<green>Tormenta reducida en " + stormHours + " horas. Tiempo restante: "
@@ -485,7 +512,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
-                    "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor", "finalmsg");
+                    "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor", "finalmsg",
+                    "beginning");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
@@ -510,6 +538,10 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             }
 
             // Comando day - sugerir algunos días comunes
+            if (subcommand.equals("beginning") && sender.isOp()) {
+                return "tp".startsWith(args[1].toLowerCase()) ? List.of("tp") : List.of();
+            }
+
             if (subcommand.equals("day") && sender.isOp()) {
                 return Arrays.asList("1", "2", "3", "5", "10", "15", "20", "30").stream()
                         .filter(day -> day.startsWith(args[1]))

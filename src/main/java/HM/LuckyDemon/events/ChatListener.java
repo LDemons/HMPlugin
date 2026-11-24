@@ -24,6 +24,14 @@ public class ChatListener implements Listener {
         this.plugin = plugin;
     }
 
+    /** Formato del chat: cabeza, corazon de vidas y nombre (como en el tab). */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onChatFormat(io.papermc.paper.event.player.AsyncChatEvent event) {
+        net.kyori.adventure.text.Component prefix = HM.LuckyDemon.managers.ScoreboardManager.prefix(event.getPlayer());
+        event.renderer((source, name, message, viewer) -> prefix.append(name)
+                .append(net.kyori.adventure.text.Component.text(": ")).append(message));
+    }
+
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player sender = event.getPlayer();

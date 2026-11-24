@@ -69,15 +69,19 @@ public class AchievementListener implements Listener {
                 "Ten Hambre, Debilidad y Ceguera a la vez", "task"));
         defs.put("duro_como_la_piedra", child("minecraft:tnt", "Duro como la piedra",
                 "Sobrevive a 3 explosiones en menos de 1 minuto", "goal"));
+        defs.put("yokoso", child("minecraft:purpur_block", "Yokoso Watashi no Soul Society",
+                "Sé el primero en entrar a The Beginning", "challenge"));
 
         Map<net.kyori.adventure.key.Key, String> toLoad = new LinkedHashMap<>();
         defs.forEach((id, json) -> {
             NamespacedKey k = key(id);
-            // Bukkit puede guardar los logros cargados en el datapack del mundo: se borran para cargar la version actual
+            // Si ya vino cargado del datapack del mundo (versiones viejas lo guardaban ahi), removeAdvancement solo
+            // borra el archivo: sigue en memoria este arranque y desde el siguiente se carga la version actual
             if (Bukkit.getAdvancement(k) != null) Bukkit.getUnsafe().removeAdvancement(k);
-            toLoad.put(k, json);
+            else toLoad.put(k, json);
         });
-        Bukkit.getUnsafe().loadAdvancements(toLoad, true);
+        // false = no guardarlos en el datapack del mundo, se cargan de nuevo en cada arranque
+        Bukkit.getUnsafe().loadAdvancements(toLoad, false);
     }
 
     private static String child(String icon, String title, String desc, String frame) {

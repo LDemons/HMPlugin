@@ -79,7 +79,17 @@ public class DifficultyManager {
             difficultyLevel = 0;
         }
         saveDifficultyData();
+
+        // DÍA 30: murciélagos y calamares se cancelan al nacer, su tope nunca se llena y el juego lo reintenta
+        // cada tick. Intentarlo cada 10 s quita ese trabajo (-1 = valor por defecto del server)
+        int ticks = currentDay >= 30 ? TRANSFORMED_SPAWN_TICKS : -1;
+        for (org.bukkit.World world : org.bukkit.Bukkit.getWorlds()) {
+            world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.AMBIENT, ticks);
+            world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.WATER_ANIMAL, ticks);
+        }
     }
+
+    private static final int TRANSFORMED_SPAWN_TICKS = 200;
 
     public int getDifficultyLevel() {
         return difficultyLevel;
@@ -204,7 +214,7 @@ public class DifficultyManager {
     }
 
     /** Nombre de mob especial (desde el día 30 cada mob modificado lleva el suyo). Oculto, sale en las muertes. */
-    private static void setSpecialName(LivingEntity entity, String name,
+    public static void setSpecialName(LivingEntity entity, String name,
             net.kyori.adventure.text.format.NamedTextColor color) {
         entity.customName(net.kyori.adventure.text.Component.text(name).color(color)
                 .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
@@ -227,6 +237,10 @@ public class DifficultyManager {
         }
         if (entity instanceof Phantom) {
             applyPhantomEffects((Phantom) entity);
+        }
+        // DÍA 10 sigue hasta que el 25 lo reemplaza
+        if (entity.getType().name().equals("CREAKING")) {
+            applyCreakingEffects(entity);
         }
         if (entity instanceof Animals || entity instanceof org.bukkit.entity.Bat || entity instanceof Fish
                 || entity instanceof Axolotl || entity instanceof Squid || entity instanceof Dolphin
@@ -318,16 +332,31 @@ public class DifficultyManager {
         if (entity instanceof Ghast) {
             applyDemonicGhastEffects((Ghast) entity);
         }
-
-        // DÍA 30: Creepers eléctricos
-        if (entity instanceof org.bukkit.entity.Creeper) {
-            makeCreperCharged((org.bukkit.entity.Creeper) entity);
-        }
     }
 
     // ========== MECÁNICAS DÍA 40 ==========
 
     private static final int HOSTILE_ENDERMAN_PERCENT = 10;
+    private static final int MAX_ZOMBIE_NAUTILUS = 4;
+    private static final double ZOMBIE_NAUTILUS_RADIUS = 64;
+
+    /**
+     * DÍA 40: al quitar el Nautilus su tope (criaturas de agua) nunca se llena y el juego sigue intentando generar
+     * sin parar; con este tope de Zombie Nautilus cerca ya no se crean más.
+     */
+    public boolean zombieNautilusCapReached(org.bukkit.Location loc) {
+        return currentDay >= 40 && loc.getNearbyEntitiesByType(org.bukkit.entity.ZombieNautilus.class,
+                ZOMBIE_NAUTILUS_RADIUS).size() >= MAX_ZOMBIE_NAUTILUS;
+    }
+
+    /** DÍA 40: Nautilus ya existente -> Zombie Nautilus (el Drowned se lo pone applyDay40Effects), o nada si está el tope. */
+    public void replaceNautilus(LivingEntity nautilus) {
+        if (zombieNautilusCapReached(nautilus.getLocation())) {
+            nautilus.remove();
+        } else {
+            replaceMob(nautilus, EntityType.ZOMBIE_NAUTILUS);
+        }
+    }
 
     /** DÍA 40: cambia el mob por otro. Devuelve true si lo reemplazó. Corre antes de los efectos del 30. */
     private boolean replaceDay40Mob(LivingEntity entity) {
@@ -348,7 +377,7 @@ public class DifficultyManager {
                 setSpecialName(vindicator, "Vindicator Furioso", net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
             }
             case WOLF -> replaceMob(entity, EntityType.CAT); // el gato sale Supernova (applyDay40Effects)
-            case NAUTILUS -> replaceMob(entity, EntityType.ZOMBIE_NAUTILUS); // el Drowned se lo pone applyDay40Effects
+            case NAUTILUS -> replaceNautilus(entity); // los naturales ni llegan: PlayerListener.onCreatureSpawn
             case COW, MOOSHROOM, SHEEP, PIG, CHICKEN -> {
                 LivingEntity ravager = replaceMob(entity, EntityType.RAVAGER);
                 // Los chunks nuevos se generan a ~160 bloques y un monstruo a más de 128 de un jugador se borra al
@@ -411,9 +440,9 @@ public class DifficultyManager {
                 entity.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE).setBaseValue(10);
             }
             case ARMADILLO -> {
-                // 300 de vida; al morir suelta un stack de Blaze Rod o de bloques de Lapis (Day40MobListener)
-                entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(300);
-                entity.setHealth(300);
+                // 500 de vida; al morir suelta un stack de Blaze Rod o de bloques de Lapis (Day40MobListener)
+                entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(500);
+                entity.setHealth(500);
                 entity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "rich_armadillo"),
                         org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
                 setSpecialName(entity, "Armadillo Acorazado", net.kyori.adventure.text.format.NamedTextColor.GOLD);
@@ -458,12 +487,16 @@ public class DifficultyManager {
 
     private static final int MOUNTED_PIGMAN_PERCENT = 5;
 
-    /** DÍA 40: Pigman montado en Cerdo, Abeja, Ghast o Magma Cube (25% cada uno). */
+    /** DÍA 40: Pigman montado en Cerdo, Abeja, Ghast, Magma Cube o Ultra Ravager (20% cada uno, como el original). */
     private void mountPigman(LivingEntity pigman) {
         org.bukkit.Location loc = pigman.getLocation();
         String name;
         LivingEntity mount;
-        switch (random.nextInt(4)) {
+        switch (random.nextInt(5)) {
+            case 4 -> {
+                spawnUltraRavager(pigman);
+                return;
+            }
             case 0 -> {
                 mount = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.PIG);
                 name = "Pigman Jinete de Cerdo";
@@ -504,6 +537,53 @@ public class DifficultyManager {
         }
         mount.addPassenger(pigman);
         setSpecialName(pigman, name, net.kyori.adventure.text.format.NamedTextColor.GOLD);
+    }
+
+    /**
+     * DÍA 40: Ultra Ravager (250 corazones, Speed II, Fuerza II) con Carlos el Esclavo (el pigman, 75 corazones,
+     * cota Protección II y espada Empuje X) y encima Jess la Emperatriz (aldeana, 120 corazones).
+     * Drops por la marca day40_boss en Day40MobListener: totem, 32 lingotes de oro y 2 manzanas doradas.
+     */
+    private void spawnUltraRavager(LivingEntity carlos) {
+        org.bukkit.Location loc = carlos.getLocation();
+        LivingEntity ravager = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.RAVAGER);
+        LivingEntity jess = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.VILLAGER);
+        setBoss(ravager, "ultra_ravager", "Ultra Ravager", 500);
+        setBoss(carlos, "carlos", "Carlos el Esclavo", 150);
+        setBoss(jess, "jess", "Jess la Emperatriz", 240);
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
+
+        org.bukkit.inventory.ItemStack sword = new org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD);
+        sword.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.KNOCKBACK, 10);
+        org.bukkit.inventory.EntityEquipment eq = carlos.getEquipment();
+        // Cota de malla completa con Protección II
+        org.bukkit.inventory.ItemStack[] armor = {
+                new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_BOOTS),
+                new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_LEGGINGS),
+                new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_CHESTPLATE),
+                new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_HELMET) };
+        for (org.bukkit.inventory.ItemStack piece : armor) {
+            piece.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 2);
+        }
+        eq.setArmorContents(armor);
+        eq.setItemInMainHand(sword);
+        eq.setHelmetDropChance(0);
+        eq.setChestplateDropChance(0);
+        eq.setLeggingsDropChance(0);
+        eq.setBootsDropChance(0);
+        eq.setItemInMainHandDropChance(0);
+
+        carlos.addPassenger(jess);
+        ravager.addPassenger(carlos);
+    }
+
+    private void setBoss(LivingEntity mob, String id, String name, double health) {
+        mob.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(health);
+        mob.setHealth(health);
+        mob.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "day40_boss"),
+                org.bukkit.persistence.PersistentDataType.STRING, id);
+        setSpecialName(mob, name, net.kyori.adventure.text.format.NamedTextColor.GREEN);
     }
 
     // Potencia 200 como el original: congela el server unos segundos al explotar (Nacho lo quiere así)
@@ -677,41 +757,6 @@ public class DifficultyManager {
     }
 
     /**
-     * DÍA 30: Transformar calamar en guardián con Speed II
-     */
-    private void transformSquidToGuardian(org.bukkit.entity.Squid squid) {
-        org.bukkit.Location loc = squid.getLocation();
-        org.bukkit.World world = squid.getWorld();
-
-        // Remover el calamar INMEDIATAMENTE
-        squid.remove();
-
-        // Spawnear guardián INMEDIATAMENTE (sin delay)
-        org.bukkit.entity.Guardian guardian = (org.bukkit.entity.Guardian) world.spawnEntity(
-                loc,
-                org.bukkit.entity.EntityType.GUARDIAN);
-
-        // MARCAR INMEDIATAMENTE como transformado (ANTES de que se procese)
-        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "transformed_mob");
-        guardian.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-
-        // Aplicar Speed II
-        guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
-
-        // Nombre especial (sin nametag visible)
-        guardian.customName(net.kyori.adventure.text.Component.text("Guardián Acuático")
-                .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
-                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-        guardian.setCustomNameVisible(false);
-
-        // Marcar también con un segundo marcador para evitar re-procesamiento
-        guardian.getPersistentDataContainer().set(
-                new org.bukkit.NamespacedKey(plugin, "skip_effects"),
-                org.bukkit.persistence.PersistentDataType.BYTE,
-                (byte) 1);
-    }
-
-    /**
      * DÍA 30: Transformar Piglin a Hoglin
      */
     private void transformPiglinToHoglin(org.bukkit.entity.Piglin piglin) {
@@ -782,41 +827,6 @@ public class DifficultyManager {
 
         // Hacer agresivo usando el sistema ya existente
         makeAggressive((org.bukkit.entity.Mob) allay, 0.0); // 0 daño porque explota
-    }
-
-    /**
-     * DÍA 30: Transformar murciélago en blaze con Resistencia II
-     */
-    private void transformBatToBlaze(org.bukkit.entity.Bat bat) {
-        org.bukkit.Location loc = bat.getLocation();
-        org.bukkit.World world = bat.getWorld();
-
-        // Remover el murciélago INMEDIATAMENTE
-        bat.remove();
-
-        // Spawnear blaze INMEDIATAMENTE (sin delay)
-        org.bukkit.entity.Blaze blaze = (org.bukkit.entity.Blaze) world.spawnEntity(
-                loc,
-                org.bukkit.entity.EntityType.BLAZE);
-
-        // MARCAR INMEDIATAMENTE como transformado
-        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "transformed_mob");
-        blaze.getPersistentDataContainer().set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-
-        // Aplicar Resistencia II
-        blaze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
-
-        // Nombre especial (sin nametag visible)
-        blaze.customName(net.kyori.adventure.text.Component.text("Blaze Infernal")
-                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
-                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-        blaze.setCustomNameVisible(false);
-
-        // Marcar también con un segundo marcador para evitar re-procesamiento
-        blaze.getPersistentDataContainer().set(
-                new org.bukkit.NamespacedKey(plugin, "skip_effects"),
-                org.bukkit.persistence.PersistentDataType.BYTE,
-                (byte) 1);
     }
 
     /**
@@ -965,31 +975,35 @@ public class DifficultyManager {
                 "Esqueleto Asesino", "Esqueleto Pesadilla" }[skeletonClass - 1],
                 net.kyori.adventure.text.format.NamedTextColor.GRAY);
 
+        // Del 20 al 29 version facil; desde el 30 se vuelven mas dificiles (imagenes de la lista)
+        boolean hard = currentDay >= 30;
+        double health = 40.0;
+
         if (skeletonClass == 1) {
-            // ESQUELETO TÁCTICO - Wither - Cota Malla - Punch 30 + Power 25 - 20❤
+            // ESQUELETO TÁCTICO - Wither - Cota Malla - Punch XX (dia 30: Punch XXX + Power XXV) - 20❤
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 30);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 25);
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, hard ? 30 : 20);
+            if (hard)
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 25);
             equipment.setItemInMainHand(bow);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_CHESTPLATE));
             equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_LEGGINGS));
             equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_BOOTS));
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
-            skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 2) {
-            // ESQUELETO INFERNAL - Normal - Hierro - Hacha de Diamante Fire Aspect X - 20❤
-            org.bukkit.inventory.ItemStack axe = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_AXE);
-            axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 10);
+            // ESQUELETO INFERNAL - Normal - Hierro - Hacha de hierro Fire Aspect II, 10❤ (dia 30: diamante FA X, 20❤)
+            org.bukkit.inventory.ItemStack axe = new org.bukkit.inventory.ItemStack(
+                    hard ? org.bukkit.Material.DIAMOND_AXE : org.bukkit.Material.IRON_AXE);
+            axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, hard ? 10 : 2);
             equipment.setItemInMainHand(axe);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_CHESTPLATE));
             equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_LEGGINGS));
             equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_BOOTS));
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
-            skeletonEntity.setHealth(40.0);
+            if (!hard)
+                health = 20.0;
         } else if (skeletonClass == 3) {
-            // ESQUELETO GUERRERO - Normal - Diamante Full Protección 4 - Arco - 20❤
+            // ESQUELETO GUERRERO - Normal - Diamante - Arco - 10❤ (dia 30: Proteccion IV, 20❤)
             equipment.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW));
 
             org.bukkit.inventory.ItemStack helmet = new org.bukkit.inventory.ItemStack(
@@ -1001,37 +1015,37 @@ public class DifficultyManager {
             org.bukkit.inventory.ItemStack boots = new org.bukkit.inventory.ItemStack(
                     org.bukkit.Material.DIAMOND_BOOTS);
 
-            helmet.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
-            chestplate.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
-            leggings.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
-            boots.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+            if (hard) {
+                helmet.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+                chestplate.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+                leggings.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+                boots.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION, 4);
+            } else {
+                health = 20.0;
+            }
 
             equipment.setHelmet(helmet);
             equipment.setChestplate(chestplate);
             equipment.setLeggings(leggings);
             equipment.setBoots(boots);
 
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
-            skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 4) {
-            // ESQUELETO ASESINO - Normal - Oro - Ballesta Sharpness 25 + Velocidad 2 - 20❤
+            // ESQUELETO ASESINO - Normal - Oro - Ballesta Sharpness XX (dia 30: XXV + Velocidad II) - 20❤
             org.bukkit.inventory.ItemStack crossbow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.CROSSBOW);
-            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, 25);
+            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, hard ? 25 : 20);
             equipment.setItemInMainHand(crossbow);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_CHESTPLATE));
             equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_LEGGINGS));
             equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_BOOTS));
 
-            // Aplicar Velocidad 2
-            skeletonEntity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+            if (hard)
+                skeletonEntity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
 
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
-            skeletonEntity.setHealth(40.0);
         } else if (skeletonClass == 5) {
-            // ESQUELETO PESADILLA - Wither - Cuero Rojo - Power L (50) - 20❤
+            // ESQUELETO PESADILLA - Wither - Cuero Rojo - Power X (dia 30: Power L) - 20❤
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 50);
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, hard ? 50 : 10);
             equipment.setItemInMainHand(bow);
 
             org.bukkit.inventory.ItemStack helmet = new org.bukkit.inventory.ItemStack(
@@ -1068,9 +1082,10 @@ public class DifficultyManager {
             equipment.setLeggings(leggings);
             equipment.setBoots(boots);
 
-            skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(40.0);
-            skeletonEntity.setHealth(40.0);
         }
+
+        skeletonEntity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(health);
+        skeletonEntity.setHealth(health);
 
         // DÍA 30: Flechas de Daño II en mano izquierda para todos los skeleton riders
         if (currentDay >= 30) {

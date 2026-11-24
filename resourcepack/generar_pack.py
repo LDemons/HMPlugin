@@ -214,6 +214,41 @@ def pale(img):
 def build_pack(frames, out_zip):
     providers = []
     files = {}
+    tex = Path(__file__).parent / "texturas"
+
+    def put(path, data):
+        files[path] = json.dumps(data, indent=2).encode() if isinstance(data, dict) else data
+
+    # Bloque de Netherite Infernal (netherite_block.png del pack PERMADEATH V2.8). El plugin lo muestra con un
+    # item display del tamano del bloque (item_model hmplugin:infernal_netherite) encima del spawner
+    put(f"assets/{NAMESPACE}/textures/block/infernal_netherite.png", (tex / "infernal_netherite.png").read_bytes())
+    put(f"assets/{NAMESPACE}/models/block/infernal_netherite.json",
+        {"parent": "minecraft:block/cube_all", "textures": {"all": f"{NAMESPACE}:block/infernal_netherite"}})
+    put(f"assets/{NAMESPACE}/items/infernal_netherite.json",
+        {"model": {"type": "minecraft:model", "model": f"{NAMESPACE}:block/infernal_netherite"}})
+
+    # Items planos (texturas del pack PERMADEATH V2.8). Las piezas de armadura (V1.8) son grises y se tinen con el
+    # color del cuero, igual que en el original: el plugin las tine de rojo
+    for name in ["life_orb", "end_relic", "beginning_relic"] + [
+            f"infernal_netherite_{p}" for p in ("helmet", "chestplate", "leggings", "boots")]:
+        put(f"assets/{NAMESPACE}/textures/item/{name}.png", (tex / f"{name}.png").read_bytes())
+        put(f"assets/{NAMESPACE}/models/item/{name}.json",
+            {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NAMESPACE}:item/{name}"}})
+        model = {"type": "minecraft:model", "model": f"{NAMESPACE}:item/{name}"}
+        if name.startswith("infernal_netherite_"):
+            model["tints"] = [{"type": "minecraft:dye", "default": -6265536}]
+        put(f"assets/{NAMESPACE}/items/{name}.json", {"model": model})
+
+    # Armadura puesta: equipamiento hmplugin:infernal_netherite (capas de cuero de la V1.8, tenidas con el color)
+    dyeable = {"color_when_undyed": -6265536}
+    put(f"assets/{NAMESPACE}/textures/entity/equipment/humanoid/infernal_netherite.png",
+        (tex / "infernal_netherite_layer_1.png").read_bytes())
+    put(f"assets/{NAMESPACE}/textures/entity/equipment/humanoid_leggings/infernal_netherite.png",
+        (tex / "infernal_netherite_layer_2.png").read_bytes())
+    put(f"assets/{NAMESPACE}/equipment/infernal_netherite.json", {"layers": {
+        "humanoid": [{"texture": f"{NAMESPACE}:infernal_netherite", "dyeable": dyeable}],
+        "humanoid_leggings": [{"texture": f"{NAMESPACE}:infernal_netherite", "dyeable": dyeable}]}})
+
     for i, img in enumerate(frames):
         name = f"heart_{i:02d}.png"
         buf = BytesIO()

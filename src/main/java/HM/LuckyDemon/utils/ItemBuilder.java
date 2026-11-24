@@ -114,6 +114,25 @@ public class ItemBuilder {
         return this;
     }
 
+    /** Modelo del resource pack del plugin (assets/hmplugin/items/&lt;id&gt;.json). */
+    public ItemBuilder model(String id) {
+        if (meta != null) {
+            meta.setItemModel(new NamespacedKey(HMPlugin.getInstance(), id));
+        }
+        return this;
+    }
+
+    /** Textura de la armadura puesta (assets/hmplugin/equipment/&lt;id&gt;.json). */
+    public ItemBuilder equipment(String id, EquipmentSlot slot) {
+        if (meta != null) {
+            org.bukkit.inventory.meta.components.EquippableComponent eq = meta.getEquippable();
+            eq.setSlot(slot);
+            eq.setModel(new NamespacedKey(HMPlugin.getInstance(), id));
+            meta.setEquippable(eq);
+        }
+        return this;
+    }
+
     public ItemStack build() {
         if (item != null && meta != null) {
             item.setItemMeta(meta);

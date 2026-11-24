@@ -22,7 +22,7 @@ import org.bukkit.potion.PotionEffectType;
 import java.util.Random;
 
 /**
- * DÍA 40: pociones de las Brujas Imposibles y bolas de los Demonios Flotantes.
+ * DÍA 40: pociones de las Brujas Imposibles, bolas de los Demonios Flotantes, carga del rayo de los guardianes y drops.
  */
 public class Day40MobListener implements Listener {
 
@@ -128,6 +128,39 @@ public class Day40MobListener implements Listener {
                 new NamespacedKey(HMPlugin.getInstance(), "rich_armadillo"), PersistentDataType.BYTE)) {
             e.getDrops().add(new ItemStack(random.nextBoolean() ? Material.BLAZE_ROD : Material.LAPIS_BLOCK, 64));
         }
+        // Ultra Ravager, Carlos y Jess (DifficultyManager.spawnUltraRavager)
+        String boss = e.getEntity().getPersistentDataContainer().get(bossKey, PersistentDataType.STRING);
+        if (boss != null) {
+            e.getDrops().add(switch (boss) {
+                case "ultra_ravager" -> new ItemStack(Material.TOTEM_OF_UNDYING);
+                case "carlos" -> new ItemStack(Material.GOLD_INGOT, 32);
+                default -> new ItemStack(Material.GOLDEN_APPLE, 2);
+            });
+        }
+    }
+
+    private final NamespacedKey bossKey = new NamespacedKey(HMPlugin.getInstance(), "day40_boss");
+
+    private final java.util.Set<java.util.UUID> chargingGuardians = new java.util.HashSet<>();
+
+    /**
+     * Guardianes (y ancianos): el rayo carga el doble de rápido. Mientras tienen objetivo, cada tick se le suma un
+     * tick más a la carga; solo corre para los guardianes que están atacando.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onGuardianTarget(org.bukkit.event.entity.EntityTargetLivingEntityEvent e) {
+        if (!(e.getEntity() instanceof org.bukkit.entity.Guardian guardian) || e.getTarget() == null
+                || GameManager.getInstance().getDay() < 40 || !chargingGuardians.add(guardian.getUniqueId())) {
+            return;
+        }
+        org.bukkit.Bukkit.getScheduler().runTaskTimer(HMPlugin.getInstance(), task -> {
+            if (!guardian.isValid() || guardian.getTarget() == null) {
+                chargingGuardians.remove(guardian.getUniqueId());
+                task.cancel();
+            } else if (guardian.hasLaser() && guardian.getLaserTicks() < guardian.getLaserDuration()) {
+                guardian.setLaserTicks(guardian.getLaserTicks() + 1);
+            }
+        }, 1L, 1L);
     }
 
     // Potencia 10 (una TNT es 4, un creeper eléctrico 6); Nacho la pidió mucho más fuerte que 4

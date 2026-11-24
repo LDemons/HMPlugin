@@ -32,6 +32,8 @@ public class LivesManager {
     public void setLives(OfflinePlayer player, int lives) {
         HMPlugin.getInstance().getConfig().set("player_lives." + player.getUniqueId().toString(), lives);
         HMPlugin.getInstance().saveConfig();
+        Player online = player.getPlayer();
+        if (online != null) ScoreboardManager.getInstance().updateTabName(online);
     }
 
     /**

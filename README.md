@@ -7,6 +7,7 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 - 3 vidas por jugador. Al perder una sale una animacion de corazon roto (requiere el resource pack, que el plugin envia solo al entrar).
 - Sin vidas: permadeath y no puede volver a entrar (los op si).
 - Mensajes y sonido de muerte propios, cabeza del jugador al morir, corazones en el tab, menciones en el chat (`@jugador`, `@everyone`) y avisos a Discord.
+- En el tab y en el chat cada jugador sale con la cabeza de su skin y un corazon con sus vidas: verde 3, amarillo 2, rojo 1, gris 0.
 - Sin PvP hasta el dia 40.
 - **Death Train**: cada muerte desata (o alarga) una tormenta electrica. Dura tantas horas como el dia actual y la cuenta vuelve a 1 cada 25 dias (dia 26 = 1 h). Con tormenta no se puede dormir.
 - Portal al End bloqueado hasta el dia 30.
@@ -29,6 +30,7 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 - KeepInventory.
 - Animales pasivos, marinos y aldeanos agresivos (2 de dano); los pigmans se enojan al verte.
 - Aranas con 3 a 5 efectos y un esqueleto de clase encima.
+- Esqueletos de clase (version facil): Tactico (wither, cota de malla, arco Punch XX, 20 corazones), Infernal (hierro, hacha de hierro Fire Aspect II, 10 corazones), Guerrero (diamante, arco, 10 corazones), Asesino (oro, ballesta Sharpness XX, 20 corazones), Pesadilla (wither, cuero rojo, arco Power X, 20 corazones).
 - **Phantom Gigante**: tamano 9 y vida x2.
 - Golems, pigmans, ghasts, guardianes, magma cubes, endermans, brujas, wither skeletons, evokers, phantoms, slimes, drowned y blazes no sueltan drops ni experiencia.
 - Ancient City con +64 de oro, cofres de Trial Chamber con +1 totem.
@@ -42,7 +44,6 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 - Durante el Death Train todos los mobs hostiles tienen Fuerza I, Speed I y Resistencia I.
 - Aranas con 5 efectos.
 - Creaking con Fuerza II y Speed III.
-- **Creeper Electrico** (todos los creepers).
 - **Giga Slime** (tamano 15, vida x2) y **Giga Magma Cube** (tamano 16).
 - **Ghast Demoniaco**: 40-60 de vida y explosiones mas fuertes.
 - **Ravager Elite**: Fuerza II, Speed I, 1% de soltar totem.
@@ -53,16 +54,18 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 
 - Pisar bedrock te lanza por los aires.
+- **Creeper Electrico** (todos los creepers).
 - **Pillager Invisible** con ballesta Quick Charge X.
 - **Pigman Blindado** (armadura de diamante).
-- Murcielagos: 30% pasan a **Blaze Infernal** (Resistencia II), el resto no aparece.
-- Calamares: 30% pasan a **Guardian Acuatico** (Speed II), el resto no aparece.
+- Murcielagos -> **Blaze Infernal** (Resistencia II). Si ya hay 4 blazes a 64 bloques, no sale nada.
+- Calamares -> **Guardian Acuatico** (Speed II). Si ya hay 4 guardianes a 64 bloques, no sale nada.
 - Piglins -> **Hoglin Salvaje**.
 - **Allay Explosivo**: invisible, el doble de grande, Speed II, TNT en mano; explota al tocarte o al morir.
 - **Shulker Explosivo**: sus balas y su muerte dejan TNT (shulker shells al 20%).
 - **Ender Creeper** (End): electrico, invisible y esquiva las flechas teletransportandose.
 - **Ender Ghast** (End): reemplaza al 1% de los endermans y sale uno al romper cada cristal de los pilares.
-- Esqueletos con clase aleatoria: Tactico, Infernal, Guerrero, Asesino, Pesadilla (Tactico y Pesadilla son wither skeletons). Llevan flechas de Dano II.
+- **Permadeath Demon** (el dragon del End, tambien el que se respawnee): 1000 corazones y se cura la mitad. Las torres de obsidiana son de bedrock. Cada 30-90 s suelta 6 TNT (no rompen bloques, lanzan end stone), caen rayos cerca del portal y los cristales de los pilares vuelven a salir a los 1-8 min. Cada 60 s ataca: lluvia de rayos sobre los jugadores, nube verde de 15 s sobre 4 endermans (si mueren dentro, les salta un totem), o vision nocturna de aviso y a los 5 s una nube de Dano II donde estes. Al posarse en el portal suele girar 15 s rodeado de nubes de Dano IV. Su aliento convierte el end stone en bedrock. Con 300 corazones o menos se enfurece: ataca cada 40 s, los rayos tambien hacen dano y la mitad de su aliento es humo de Dano II que quita todos los efectos.
+- Todos los esqueletos tienen clase aleatoria y llevan flechas de Dano II. Las clases se vuelven mas dificiles (todas con 20 corazones): Tactico arco Punch XXX y Power XXV, Infernal hacha de diamante Fire Aspect X, Guerrero diamante con Proteccion IV, Asesino ballesta Sharpness XXV y Speed II, Pesadilla arco Power L.
 - **Zombie Jinete**: los zombies salen montados en un caballo zombie.
 - Golems con Speed IV, endermans con Fuerza II, silverfish con 5 efectos.
 - Totems con 1% de fallo.
@@ -94,17 +97,39 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Aranas -> aranas de cueva (con esqueleto jinete: **Arana de Cueva Jinete**).
 - Vacas, mooshrooms, ovejas, cerdos y pollos -> **Ravager de Granja**.
 - Endermans del Nether -> Ender Creepers; 10% de **Endermans Hostiles**.
-- Creepers con Speed II y Resistencia II; golems con Fuerza I; guardianes con Speed III y Resistencia II.
+- Creepers con Speed II y Resistencia II; golems con Fuerza I; guardianes con Speed III, Resistencia II y el rayo carga el doble de rapido.
 - **Phantom Jinete** (phantom con esqueleto de clase).
 - Lobos -> gatos; todo gato u ocelote es un **Gato Supernova** (se anuncia y explota a los 30 s, maximo 2 a la vez).
 - **Bruja Imposible**: vida x2, Speed II, pociones de Dano IV, Veneno III o Lentitud V.
 - **Demonio Flotante** (75% de los ghasts): su bola da Levitacion y Wither V.
-- 5% de **pigmans montados** en cerdo, abeja, ghast o magma cube.
+- 5% de **pigmans montados** en cerdo, abeja, ghast, magma cube o **Ultra Ravager** (20% cada uno).
+- **Ultra Ravager** (250 corazones, Speed II, Fuerza II, suelta 1 totem) lleva encima a **Carlos el Esclavo** (pigman de 75 corazones con cota de malla completa Proteccion II y espada de madera Empuje X, suelta 32 lingotes de oro) y sobre el a **Jess la Emperatriz** (aldeana de 120 corazones, suelta 2 manzanas doradas).
 - **Sulfur Cube Ardiente**: lleva un bloque de magma dentro.
 - **Nautilus Zombie Jinete**: zombie nautilus con un drowned encima.
-- **Armadillo Acorazado**: 300 de vida; suelta 64 Blaze Rods o 64 bloques de Lapis.
+- **Armadillo Acorazado**: 500 de vida; suelta 64 Blaze Rods o 64 bloques de Lapis.
 - Conejos con 1 de vida, Speed 50 y 10 de dano.
 - Ranas: al comerse un slime sueltan 5 Super Golden Apple +, al comerse un magma cube 5 manzanas de Notch.
+
+### The Beginning
+- Aparece el dia 40: un portal flotante escondido en algun lugar del Overworld (a menos de 3000 bloques del centro).
+- Antes del dia 50, entrar al portal te mata y se anuncia en el chat.
+- Desde el dia 50 se puede entrar. Se cierra durante el Death Train (la lluvia normal no) y saca a todos los que esten dentro.
+- Mundo de islas de purpur con arboles de sea lantern, islas chicas con spawners, cofres y bloques de Netherite Infernal, y ciudades Ytic (una cada 256x256 bloques).
+- Mobs: **Wither Skeleton Rosáceo** (100 de vida, espada de netherite con Filo, Speed III), **Vex Definitivo**
+  (calabaza encantada en la cabeza, cristal del End con Filo XV y Empuje XX; solo sale de los spawners de las estructuras),
+  **Ender Ghast Definitivo** (150 de vida, explosion de potencia 10; aparece solo por encima de Y 95, mas abajo solo sale
+  de spawners) y **Quantum Creeper**
+  (invisible, electrico, 100 de vida, su explosion hace x5 de dano: mata casi todo lo que tenga cerca). Maximo 70 mobs en el mundo y 8 a menos de 32 bloques, y no salen en grupo.
+- Los spawners de wither de las islas chicas sacan 3 **Mini Withers** (un tercio del tamano, 100 de vida) cada 5 minutos;
+  los de las ciudades Ytic, un wither normal cada 15 minutos. Ninguno saca mas mientras quede un wither cerca.
+- Los cofres traen loot al abrirlos: diamantes, oro, manzanas doradas, botellas de experiencia, cohetes y a veces un totem,
+  repartido en varios montones por el cofre.
+  Cada cofre trae al menos 3 objetos distintos.
+- El cofre de herramientas de las ciudades Ytic trae herramientas de netherite irrompibles.
+- No se pueden vaciar cubetas, no se pueden crear portales y nadie puede ser invisible.
+- Picar un bloque de Netherite Infernal con pico suelta un **Bloque de Netherite Infernal**.
+- **Armadura de Netherite Infernal** (roja): una pieza de netherite en el centro de la mesa y 4 Bloques de Netherite
+  Infernal arriba, abajo y a los lados. Conserva los encantamientos de la pieza.
 
 ## Logros
 
@@ -113,8 +138,9 @@ Salen en el menu de logros (tecla L), pestana **HM**.
 - **Ahorro de Espacio**: sobrevive 2 dias seguidos desde el dia 40 sin tener la Reliquia del Fin.
 - **No es mi Día**: ten Hambre, Debilidad y Ceguera a la vez.
 - **Duro como la piedra**: sobrevive a 3 explosiones en menos de 1 minuto.
+- **Yokoso Watashi no Soul Society**: se el primero en entrar a The Beginning.
 
 ## Comandos
 
-- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`.
+- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva).
 - `/hmreload` (alias `/hmr`), permiso `hmplugin.reload`.

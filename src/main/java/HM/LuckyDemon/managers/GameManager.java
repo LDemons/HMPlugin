@@ -162,6 +162,9 @@ public class GameManager {
             HM.LuckyDemon.events.Day40InventoryListener.applyToAllPlayers();
         }
 
+        // DÍA 40: crear The Beginning y sus portales (no hace nada si ya existe)
+        HMPlugin.getInstance().getBeginningManager().setup();
+
         // DÍA 40+: -4 corazones (se quitan si se vuelve a un dia anterior)
         for (Player p : Bukkit.getOnlinePlayers()) {
             HM.LuckyDemon.events.PlayerListener.updateHealth(p);

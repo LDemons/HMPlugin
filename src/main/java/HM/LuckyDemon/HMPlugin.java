@@ -12,6 +12,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class HMPlugin extends JavaPlugin {
     private DifficultyManager difficultyManager;
+    private HM.LuckyDemon.beginning.BeginningManager beginningManager;
     private HM.LuckyDemon.utils.ResourcePackServer resourcePackServer;
 
     private static HMPlugin instance;
@@ -69,6 +70,7 @@ public class HMPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40InventoryListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40CraftListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40MobListener(), this);
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.PermadeathDemonListener(), this);
 
         // DÍA 40+: Modificaciones de loot
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40LootListener(), this);
@@ -97,6 +99,11 @@ public class HMPlugin extends JavaPlugin {
         new HeartbeatTask().runTaskTimer(this, 0L, intervalTicks);
 
         difficultyManager = new DifficultyManager(this);
+
+        // The Beginning (se crea el dia 40; si el dia sube despues, lo crea GameManager.setDay)
+        beginningManager = new HM.LuckyDemon.beginning.BeginningManager(this);
+        getServer().getPluginManager().registerEvents(beginningManager, this);
+        beginningManager.setup();
 
         // Activar KeepInventory si el día actual es >= 20
         int currentDay = HM.LuckyDemon.managers.GameManager.getInstance().getDay();
@@ -131,5 +138,9 @@ public class HMPlugin extends JavaPlugin {
 
     public DifficultyManager getDifficultyManager() {
         return difficultyManager;
+    }
+
+    public HM.LuckyDemon.beginning.BeginningManager getBeginningManager() {
+        return beginningManager;
     }
 }

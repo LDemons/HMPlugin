@@ -38,37 +38,18 @@ public class RecipeManager {
         }
 
         private static void registerInfernalArmor() {
-                // Casco Infernal
+                // Netherite Infernal: la pieza de netherite (Armadura Infernal del dia 25) en el centro rodeada por
+                // arriba, los lados y abajo de Bloques de Netherite Infernal. BeginningManager le pasa los encantamientos
+                org.bukkit.inventory.RecipeChoice block = new org.bukkit.inventory.RecipeChoice.ExactChoice(
+                                HMItems.createInfernalNetherite());
                 registerShaped("infernal_helmet", HMItems.craftInfernalHelmet(),
-                                " D ",
-                                "DAD",
-                                " D ",
-                                'D', Material.DIAMOND,
-                                'A', Material.LEATHER_HELMET);
-
-                // Pechera Infernal
+                                " I ", "IAI", " I ", 'I', block, 'A', Material.NETHERITE_HELMET);
                 registerShaped("infernal_chestplate", HMItems.craftInfernalChestplate(),
-                                " D ",
-                                "DAD",
-                                " D ",
-                                'D', Material.DIAMOND,
-                                'A', Material.LEATHER_CHESTPLATE);
-
-                // Pantalones Infernales
+                                " I ", "IAI", " I ", 'I', block, 'A', Material.NETHERITE_CHESTPLATE);
                 registerShaped("infernal_leggings", HMItems.craftInfernalLeggings(),
-                                " D ",
-                                "DAD",
-                                " D ",
-                                'D', Material.DIAMOND,
-                                'A', Material.LEATHER_LEGGINGS);
-
-                // Botas Infernales
+                                " I ", "IAI", " I ", 'I', block, 'A', Material.NETHERITE_LEGGINGS);
                 registerShaped("infernal_boots", HMItems.craftInfernalBoots(),
-                                " D ",
-                                "DAD",
-                                " D ",
-                                'D', Material.DIAMOND,
-                                'A', Material.LEATHER_BOOTS);
+                                " I ", "IAI", " I ", 'I', block, 'A', Material.NETHERITE_BOOTS);
 
                 // Elytras Infernales (Receta original: Diamantes rodeando Elytras)
                 registerShaped("infernal_elytra", HMItems.craftInfernalElytra(),
@@ -168,8 +149,11 @@ public class RecipeManager {
 
                 for (int i = 0; i < ingredients.length; i += 2) {
                         Character character = (Character) ingredients[i];
-                        Material material = (Material) ingredients[i + 1];
-                        recipe.setIngredient(character, material);
+                        if (ingredients[i + 1] instanceof org.bukkit.inventory.RecipeChoice choice) {
+                                recipe.setIngredient(character, choice);
+                        } else {
+                                recipe.setIngredient(character, (Material) ingredients[i + 1]);
+                        }
                 }
 
                 // Registrar solo si no existe (para evitar errores al recargar)

@@ -38,7 +38,9 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -47,7 +49,9 @@ public class PlayerListener implements Listener {
 
     // Set para rastrear jugadores que ya vieron el mensaje de PvP
     private final Set<UUID> pvpMessageShown = new HashSet<>();
-    private final java.util.Map<org.bukkit.Location, Long> transformCooldowns = new java.util.HashMap<>();
+    // Día 30: tope de Blazes / Guardianes cerca para los que salen de murciélagos y calamares
+    private static final int MAX_TRANSFORMED = 4;
+    private static final double TRANSFORM_RADIUS = 64;
     private final java.util.Random random = new java.util.Random();
 
     // Marca en el jugador: murio con vidas y todavia no volvio a supervivencia
@@ -62,6 +66,8 @@ public class PlayerListener implements Listener {
         Player p = e.getPlayer();
         e.joinMessage(MessageUtils.format("<gray>[<green>+<gray>] <yellow>" + p.getName()));
         updateHealth(p);
+        HM.LuckyDemon.items.HMItems.updateTextures(p.getInventory());
+        HM.LuckyDemon.items.HMItems.updateTextures(p.getEnderChest());
         // Si se desconecto durante los 5 s de espectador tras morir, el paso a supervivencia nunca se aplico
         if (p.getPersistentDataContainer().has(pendingRevive())
                 && HM.LuckyDemon.managers.LivesManager.getInstance().getLives(p) > 0) {
@@ -223,86 +229,50 @@ public class PlayerListener implements Listener {
 
         int currentDay = GameManager.getInstance().getDay();
 
-        // DÍA 30+: Sistema de transformación con cooldown
-        if (currentDay >= 30) {
+        // DÍA 40: el Nautilus no llega a existir (reemplazarlo un tick después se veía aparecer y desaparecer):
+        // sale el Zombie Nautilus en su lugar, o nada si ya está el tope
+        if (currentDay >= 40 && e.getEntityType() == EntityType.NAUTILUS) {
+            e.setCancelled(true);
+            HM.LuckyDemon.managers.DifficultyManager difficulty = HMPlugin.getInstance().getDifficultyManager();
+            if (!difficulty.zombieNautilusCapReached(e.getLocation())) {
+                difficulty.applyMobEffects((LivingEntity) e.getLocation().getWorld()
+                        .spawnEntity(e.getLocation(), EntityType.ZOMBIE_NAUTILUS)); // el Drowned se lo pone el día 40
+            }
+            return;
+        }
+
+        // DÍA 30+: murciélago -> Blaze Infernal, calamar -> Guardián Acuático. El original no llega a existir, así que
+        // su tope (ambiente / agua) nunca se llena y el juego sigue intentando: con 4 cerca ya no sale nada más
+        if (currentDay >= 30 && (e.getEntity() instanceof Bat || e.getEntity() instanceof Squid)) {
+            e.setCancelled(true);
             Location loc = e.getLocation();
-
-            // Limpiar cooldowns antiguos (más de 5 segundos)
-            transformCooldowns.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > 5000);
-
-            // Verificar cooldown en esta ubicación
-            String locKey = String.format("%d_%d_%d",
-                    loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-
-            // Bat -> 30% Blaze, 70% cancelar
             if (e.getEntity() instanceof Bat) {
-                // Verificar si ya hubo una transformación reciente aquí
-                boolean onCooldown = transformCooldowns.values().stream()
-                        .anyMatch(time -> System.currentTimeMillis() - time < 1000);
-
-                if (onCooldown) {
-                    e.setCancelled(true);
-                    return;
+                if (loc.getNearbyEntitiesByType(Blaze.class, TRANSFORM_RADIUS).size() < MAX_TRANSFORMED) {
+                    Blaze blaze = (Blaze) loc.getWorld().spawnEntity(loc, EntityType.BLAZE);
+                    blaze.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
+                    blaze.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
+                    blaze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
+                    blaze.customName(net.kyori.adventure.text.Component.text("Blaze Infernal")
+                            .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
+                            .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                    blaze.setCustomNameVisible(false);
                 }
-
-                if (random.nextInt(100) < 30) {
-                    // 30% transformar
-                    e.setCancelled(true);
-                    transformCooldowns.put(loc.clone(), System.currentTimeMillis());
-
-                    Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
-                        Blaze blaze = (Blaze) loc.getWorld().spawnEntity(loc, EntityType.BLAZE);
-                        blaze.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
-                        blaze.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
-                        blaze.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
-                        blaze.customName(net.kyori.adventure.text.Component.text("Blaze Infernal")
-                                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
-                                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-                        blaze.setCustomNameVisible(false);
-                    }, 5L);
-                } else {
-                    // 70% cancelar
-                    e.setCancelled(true);
+            } else if (loc.getNearbyEntitiesByType(Guardian.class, TRANSFORM_RADIUS).size() < MAX_TRANSFORMED) {
+                Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc, EntityType.GUARDIAN);
+                guardian.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
+                guardian.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
+                // Día 40: Speed III y Resistencia II
+                guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE,
+                        currentDay >= 40 ? 2 : 1));
+                if (currentDay >= 40) {
+                    guardian.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
                 }
-                return;
+                guardian.customName(net.kyori.adventure.text.Component.text("Guardián Acuático")
+                        .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
+                        .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+                guardian.setCustomNameVisible(false);
             }
-
-            // Squid -> 30% Guardian, 70% cancelar
-            if (e.getEntity() instanceof Squid) {
-                boolean onCooldown = transformCooldowns.values().stream()
-                        .anyMatch(time -> System.currentTimeMillis() - time < 1000);
-
-                if (onCooldown) {
-                    e.setCancelled(true);
-                    return;
-                }
-
-                if (random.nextInt(100) < 30) {
-                    // 30% transformar
-                    e.setCancelled(true);
-                    transformCooldowns.put(loc.clone(), System.currentTimeMillis());
-
-                    Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
-                        Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc, EntityType.GUARDIAN);
-                        guardian.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
-                        guardian.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
-                        // Día 40: Speed III y Resistencia II
-                        guardian.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE,
-                                currentDay >= 40 ? 2 : 1));
-                        if (currentDay >= 40) {
-                            guardian.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, Integer.MAX_VALUE, 1));
-                        }
-                        guardian.customName(net.kyori.adventure.text.Component.text("Guardián Acuático")
-                                .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
-                                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-                        guardian.setCustomNameVisible(false);
-                    }, 5L);
-                } else {
-                    // 70% cancelar
-                    e.setCancelled(true);
-                }
-                return;
-            }
+            return;
         }
 
         // DÍA 25+: Marcar slimes de división
@@ -367,6 +337,27 @@ public class PlayerListener implements Listener {
                 HMPlugin.getInstance().getDifficultyManager().applyMobEffects(e.getEntity());
             }
         }, 1L);
+    }
+
+    /**
+     * DÍA 40: Nautilus guardados en chunks viejos (de antes del 40, o con la marca del día 30, que los salta) se
+     * cambian al cargarse. Un tick después: crear entidades mientras el chunk carga las suyas no es seguro.
+     */
+    @EventHandler
+    public void onEntitiesLoad(org.bukkit.event.world.EntitiesLoadEvent e) {
+        if (GameManager.getInstance().getDay() < 40) {
+            return;
+        }
+        List<LivingEntity> nautilus = new ArrayList<>();
+        for (Entity entity : e.getEntities()) {
+            if (entity.getType() == EntityType.NAUTILUS) {
+                nautilus.add((LivingEntity) entity);
+            }
+        }
+        if (!nautilus.isEmpty()) {
+            Bukkit.getScheduler().runTask(HMPlugin.getInstance(), () -> nautilus.stream().filter(Entity::isValid)
+                    .forEach(HMPlugin.getInstance().getDifficultyManager()::replaceNautilus));
+        }
     }
 
     /**
@@ -858,9 +849,10 @@ public class PlayerListener implements Listener {
             onlinePlayer.showTitle(deathTitle);
         }
 
-        World world = player.getWorld();
-        world.strikeLightningEffect(player.getLocation());
-        world.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
+        player.getWorld().strikeLightningEffect(player.getLocation());
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
+        // El Death Train vive en el Overworld aunque se muera en otro mundo (Nether, End, The Beginning)
+        World world = Bukkit.getWorlds().get(0);
 
         // Usar el nuevo sistema de horas que resetea cada 25 días
         int stormHours = HMPlugin.getInstance().getDifficultyManager().getStormHoursForCurrentDay();
@@ -881,6 +873,7 @@ public class PlayerListener implements Listener {
             Bukkit.broadcast(MessageUtils.format("<dark_aqua>⛈ ¡Ha comenzado una tormenta de <bold>"
                     + MessageUtils.formatTime(addedSeconds) + "<reset><dark_aqua>!"));
         }
+        HMPlugin.getInstance().getBeginningManager().startDeathTrain();
 
         Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
             player.setGameMode(GameMode.SPECTATOR);
