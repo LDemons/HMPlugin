@@ -18,10 +18,10 @@ public class LootModifierListener implements Listener {
     public void onLootGenerate(LootGenerateEvent e) {
         String table = e.getLootTable().getKey().getKey();
 
-        // DÍA 1+: sin netherite en los bastiones
+        // DÍA 1+: nada de netherite en los bastiones (lingote, chatarra, plantilla, equipo y ancient debris)
         if (table.startsWith("chests/bastion_")) {
-            e.getLoot().removeIf(item -> item != null && (item.getType() == Material.NETHERITE_INGOT
-                    || item.getType() == Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE));
+            e.getLoot().removeIf(item -> item != null && (item.getType().name().contains("NETHERITE")
+                    || item.getType() == Material.ANCIENT_DEBRIS));
         }
 
         if (GameManager.getInstance().getDay() < 20) {

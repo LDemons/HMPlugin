@@ -14,11 +14,12 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 
 ## Dia 1
 
-- Netherite baneada; los bastiones no dan netherite.
+- Netherite baneada; los bastiones no dan nada de netherite (ni chatarra, ni equipo, ni ancient debris).
 - Picar ancient debris crea una TNT que explota a los 2 s.
 
 ## Dia 10
 
+- Doble de mobs hostiles.
 - Para pasar la noche hay que ser al menos 4 jugadores conectados.
 - Aranas con 1 a 3 efectos aleatorios (Speed III, Fuerza IV, Salto V, Regeneracion IV, Resistencia III, Invisibilidad, Glowing o Caida Lenta).
 - Creaking con Fuerza I y Speed I.
@@ -38,6 +39,7 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 - Los murcielagos dan ceguera 15 s al golpear.
 - Wardens el doble de rapidos.
 - Receta: skeleton skull + 8 bloques de oro = manzana de Notch.
+- Los ravagers tienen 1% de soltar un totem.
 
 ## Dia 25
 
@@ -46,7 +48,7 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 - Creaking con Fuerza II y Speed III.
 - **Giga Slime** (tamano 15, vida x2) y **Giga Magma Cube** (tamano 16).
 - **Ghast Demoniaco**: 40-60 de vida y explosiones mas fuertes.
-- **Ravager Elite**: Fuerza II, Speed I, 1% de soltar totem.
+- **Ravager Elite**: Fuerza II, Speed I, 20% de soltar totem.
 - **Armadura Infernal** (solo dias 25 a 29): Botas por Ghast Demoniaco (30%), Pechera por Giga Slime chico (20%), Pantalones por Giga Magma Cube chico (20%), Casco por arana de cueva (30%). El set completo da +4 corazones.
 
 ## Dia 30
@@ -76,7 +78,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - PvP activado.
 - Vida maxima -4 corazones.
 - Totems con 3% de fallo y gastan 2.
-- 5 slots del inventario bloqueados (los libera la **Reliquia del Fin**: shulker shells, bloques de diamante y tinte celeste).
+- 5 slots del inventario bloqueados (los libera la **Reliquia del Fin**: 2 shulker shells y un bloque de diamante; las teclas numericas y la F tampoco sirven para sacar los bloqueadores).
 - **Super Golden Apple +** (8 lingotes de oro + manzana dorada): Health Boost I 5 min.
 - **Hyper Golden Apple +** (8 bloques de oro + manzana dorada): Regeneracion III 30 s, Absorcion III 2 min y +2 corazones permanentes (estos solo una vez por jugador).
 - Antorchas no crafteables.

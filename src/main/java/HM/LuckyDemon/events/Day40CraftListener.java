@@ -46,6 +46,11 @@ public class Day40CraftListener implements Listener {
                 && GameManager.getInstance().getDay() < 40) {
             e.getInventory().setResult(null);
         }
+        // DÍA 20: Notch con calavera de esqueleto
+        if (e.getRecipe() instanceof org.bukkit.Keyed keyed && keyed.getKey().getKey().equals("skull_to_notch")
+                && GameManager.getInstance().getDay() < 20) {
+            e.getInventory().setResult(null);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

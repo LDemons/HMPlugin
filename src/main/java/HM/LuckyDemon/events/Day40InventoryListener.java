@@ -381,6 +381,16 @@ public class Day40InventoryListener implements Listener {
 
         int slot = e.getSlot();
 
+        // Tecla numérica de un slot bloqueado o F (mano izquierda) en cualquier inventario, también en cofres:
+        // intercambiaban el bloqueador con el slot del cofre
+        if ((e.getClick() == org.bukkit.event.inventory.ClickType.NUMBER_KEY
+                && LOCKED_SLOTS.contains(e.getHotbarButton()))
+                || e.getClick() == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND) {
+            e.setCancelled(true);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.2f);
+            return;
+        }
+
         // Verificar si el click es en el inventario del jugador
         if (e.getClickedInventory() != null && e.getClickedInventory().equals(player.getInventory())) {
 
@@ -435,9 +445,11 @@ public class Day40InventoryListener implements Listener {
             return;
         }
 
-        // Verificar si alguno de los slots afectados está bloqueado
-        for (int slot : e.getInventorySlots()) {
-            if (LOCKED_SLOTS.contains(slot) || slot == OFFHAND_SLOT) {
+        // Verificar si alguno de los slots afectados del jugador está bloqueado (los del cofre no cuentan)
+        for (int raw : e.getRawSlots()) {
+            int slot = e.getView().convertSlot(raw);
+            if (e.getView().getInventory(raw) == player.getInventory()
+                    && (LOCKED_SLOTS.contains(slot) || slot == OFFHAND_SLOT)) {
                 e.setCancelled(true);
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.2f);
                 return;

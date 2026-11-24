@@ -83,7 +83,11 @@ public class DifficultyManager {
         // DÍA 30: murciélagos y calamares se cancelan al nacer, su tope nunca se llena y el juego lo reintenta
         // cada tick. Intentarlo cada 10 s quita ese trabajo (-1 = valor por defecto del server)
         int ticks = currentDay >= 30 ? TRANSFORMED_SPAWN_TICKS : -1;
+        // DÍA 10: doble de mobs hostiles (tope de monstruos x2; -1 = valor por defecto del server)
+        int monsters = getMobSpawnMultiplier() > 1 ? (int) (org.bukkit.Bukkit.getSpawnLimit(
+                org.bukkit.entity.SpawnCategory.MONSTER) * getMobSpawnMultiplier()) : -1;
         for (org.bukkit.World world : org.bukkit.Bukkit.getWorlds()) {
+            world.setSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER, monsters);
             world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.AMBIENT, ticks);
             world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.WATER_ANIMAL, ticks);
         }
@@ -1294,7 +1298,9 @@ public class DifficultyManager {
     }
 
     private void setupRavagerLoot(Ravager ravager) {
-        // Ravager especial sin nametag (1% chance de dropear Tótem)
+        // DÍA 20: 1% de soltar un tótem (el 25 sube a 20%)
+        ravager.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "totem_drop_chance"),
+                org.bukkit.persistence.PersistentDataType.INTEGER, 1);
     }
 
     // ========== MECÁNICAS DÍA 25 ==========
@@ -1336,11 +1342,11 @@ public class DifficultyManager {
         ravager.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
         ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0));
 
-        // Marcar con 1% de drop de tótem
+        // 20% de soltar un tótem
         ravager.getPersistentDataContainer().set(
                 new org.bukkit.NamespacedKey(plugin, "totem_drop_chance"),
                 org.bukkit.persistence.PersistentDataType.INTEGER,
-                1);
+                20);
     }
 
     private void applyGigaSlimeEffects(Slime slime) {
