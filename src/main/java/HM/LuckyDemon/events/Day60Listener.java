@@ -111,9 +111,12 @@ public class Day60Listener implements Listener {
         String recipe = recipeKey(e.getRecipe());
         if (recipe == null) return;
         ItemStack[] matrix = e.getInventory().getMatrix();
-        boolean ok = recipe.equals("beginning_relic")
-                ? day() >= 60 && matrix.length == 9 && HMItems.isItem(matrix[4], "end_relic") && enough(matrix)
-                : isLifeOrbEventRunning() && enough(matrix);
+        boolean ok = switch (recipe) {
+            case "beginning_relic" -> day() >= 60 && matrix.length == 9 && HMItems.isItem(matrix[4], "end_relic")
+                    && enough(matrix);
+            case "life_orb" -> isLifeOrbEventRunning() && enough(matrix);
+            default -> enough(matrix); // hyper_gap desde el 50
+        };
         if (!ok) {
             e.getInventory().setResult(null);
         }
@@ -167,16 +170,19 @@ public class Day60Listener implements Listener {
         if (recipe instanceof org.bukkit.Keyed keyed) {
             String key = keyed.getKey().getKey();
             if (key.equals("beginning_relic") || key.equals("life_orb")) return key;
+            // DÍA 50: la Hyper Golden Apple + pide 8 bloques de oro por casilla (antes, 1)
+            if (key.equals("hyper_gap") && GameManager.getInstance().getDay() >= 50) return key;
         }
         return null;
     }
 
-    /** Cuánto pide cada casilla: 32 bloques de diamante, 64 de lo demás del Orbe, 1 el resto. */
+    /** Cuánto pide cada casilla: 32 bloques de diamante, 8 de oro, 64 de lo demás del Orbe, 1 el resto. */
     private static int cost(ItemStack item) {
         if (item == null || item.getType().isAir()) return 0;
         return switch (item.getType()) {
             case DIAMOND_BLOCK -> 32;
-            case HEART_OF_THE_SEA, SHULKER_SHELL, LIGHT_BLUE_DYE -> 1;
+            case GOLD_BLOCK -> 8;
+            case HEART_OF_THE_SEA, SHULKER_SHELL, LIGHT_BLUE_DYE, GOLDEN_APPLE -> 1;
             default -> 64;
         };
     }

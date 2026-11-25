@@ -176,6 +176,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - **Wither Skeleton Emperador**: 1 de cada 50 wither skeletons del Nether. 40 corazones, estandarte y armadura de oro, arco con Power C y Punch V. Las flechas no le hacen dano. 50% de soltar una espada de netherite irrompible.
 - **Strider Jinete**: todo strider adulto lleva un Piglin Brute encima.
 - **Gigantes** en los Plains (1 de cada 500 zombies): 300 corazones, golpes que quitan muchisima vida y sueltan el **Arco de Gigante** (Power X).
+- La **Hyper Golden Apple +** pide 8 bloques de oro en cada casilla (64 en total) y la manzana dorada al centro.
 
 ## Dia 60
 - Los totems gastan 3 y tienen 7% de probabilidad de fallar.
