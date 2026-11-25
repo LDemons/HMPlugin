@@ -208,7 +208,8 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Los Vindicators tienen 5 efectos al azar, como las aranas de cueva.
 - Los aldeanos son Vindicators, tambien los que ya existian.
 - La arena de almas da Slowness III por 30 s.
-- **Ultra Esqueletos**: Guerrero (diamante Proteccion V, arco Power L, 50 corazones), Infernal (hacha Fire Aspect XX y Filo C, 50 corazones), Asesino (ballesta Filo C, Speed IV, 30 corazones), Tactico (arco Punch L y Power CX, 30 corazones), Pesadilla (arco Power CL, 30 corazones), **Demoniaco** (cuero azul, sus flechas explotan, 50 corazones), **Cientifico** (cuero verde, flechas de Lentitud III, Debilidad, Glowing y Veneno III 3 min, 50 corazones) y, 1 de cada 100, **Definitivo** (arco Power 255, Speed II, 200 corazones, no despawnea).
+- **Ultra Esqueletos**: Guerrero (diamante Proteccion V, arco Power L, 50 corazones), Infernal (hacha Fire Aspect XX y Filo C, 50 corazones), Asesino (ballesta Filo C, Speed IV, 30 corazones), Tactico (arco Punch L y Power CX, 30 corazones), Pesadilla (arco Power CL, 30 corazones), **Demoniaco** (cuero azul, sus flechas explotan, 50 corazones), **Cientifico** (cuero verde, flechas de Lentitud III, Debilidad, Glowing y Veneno III 3 min, 50 corazones) y, 1 de cada 100, **Definitivo** (arco Power XXXMMDCCLXV, Speed II, 200 corazones, no despawnea).
+
 ## Logros
 
 Salen en el menu de logros (tecla L), pestana **HM**.

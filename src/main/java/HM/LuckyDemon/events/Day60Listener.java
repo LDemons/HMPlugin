@@ -209,7 +209,14 @@ public class Day60Listener implements Listener {
                 && e.getBow().containsEnchantment(org.bukkit.enchantments.Enchantment.FLAME)) {
             e.getProjectile().setFireTicks(2000);
         }
+        // Ultra Esqueleto Definitivo: daño de Power 32765 (el juego: 2 base + 0,5 por nivel + 0,5)
+        if (e.getEntity().getPersistentDataContainer().has(key("definitive_skeleton"))
+                && e.getProjectile() instanceof org.bukkit.entity.AbstractArrow arrow) {
+            arrow.setDamage(2.0 + 0.5 * DEFINITIVE_POWER + 0.5);
+        }
     }
+
+    private static final int DEFINITIVE_POWER = 32765;
 
     /** Los Drowned hacen el triple de daño (golpe y tridente). */
     @EventHandler(ignoreCancelled = true)

@@ -1687,11 +1687,20 @@ public class DifficultyManager {
             dyedArmor(equipment, org.bukkit.Color.GREEN);
             health = 100.0;
         } else if (skeletonClass == 8) {
-            // ULTRA ESQUELETO DEFINITIVO - Wither - sin armadura - Power XXXMMDCCLXV (32765; el juego llega a
-            // 255) - Speed II - no despawnea - 200❤
+            // ULTRA ESQUELETO DEFINITIVO - Wither - sin armadura - Power XXXMMDCCLXV - Speed II - no despawnea -
+            // 200❤. El juego no guarda niveles sobre 255: el arco lo muestra en la descripción y el daño de Power
+            // 32765 lo pone Day60Listener.onMobShoot (marca definitive_skeleton)
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 255);
+            bow.editMeta(meta -> {
+                meta.addEnchant(org.bukkit.enchantments.Enchantment.POWER, 255, true);
+                meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
+                meta.lore(List.of(net.kyori.adventure.text.Component.text("Power XXXMMDCCLXV",
+                        net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                        .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)));
+            });
             equipment.setItemInMainHand(bow);
+            skeletonEntity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "definitive_skeleton"),
+                    org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
             skeletonEntity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
             skeletonEntity.setRemoveWhenFarAway(false);
             health = 400.0;
