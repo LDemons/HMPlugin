@@ -141,6 +141,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Fundir hierro u oro da pepitas en vez de lingotes.
 - Te ahogas 5 veces mas rapido.
 - Estar sobre arena de almas da Slowness II.
+- Los bloques de magma y el dano de los Sulfur Cube pasan a x8 (el doble que el dia 40).
 - Mucha mas ceguera bajo la lluvia.
 - Los mobs hostiles tienen Resistencia al Fuego.
 - Las arañas de cueva ya no pueden tener Glowing.

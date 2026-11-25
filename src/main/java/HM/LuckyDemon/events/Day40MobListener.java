@@ -91,7 +91,10 @@ public class Day40MobListener implements Listener {
         potion.setItem(item);
     }
 
-    /** x4 de daño al pisar bloques de magma y al tocar un Sulfur Cube (que desde el día 40 lleva magma dentro). */
+    /**
+     * x4 de daño al pisar bloques de magma y al tocar un Sulfur Cube (que desde el día 40 lleva magma dentro).
+     * Día 50: los dos pasan a x8.
+     */
     @EventHandler(ignoreCancelled = true)
     public void onMagmaDamage(org.bukkit.event.entity.EntityDamageEvent e) {
         if (GameManager.getInstance().getDay() < 40) {
@@ -102,7 +105,7 @@ public class Day40MobListener implements Listener {
         boolean sulfurCube = e instanceof org.bukkit.event.entity.EntityDamageByEntityEvent byEntity
                 && byEntity.getDamager() instanceof org.bukkit.entity.SulfurCube;
         if (magmaBlock || sulfurCube) {
-            e.setDamage(e.getDamage() * 4);
+            e.setDamage(e.getDamage() * (GameManager.getInstance().getDay() >= 50 ? 8 : 4));
         }
     }
 
