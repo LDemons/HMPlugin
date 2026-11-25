@@ -184,7 +184,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Se pueden craftear las **Elytras de Netherite Infernal**: elytra rodeada de 8 Bloques de Netherite Infernal (conserva sus encantamientos). Cuentan como pechera para el bonus del set de Netherite Infernal.
 - Cada 60 minutos jugados en supervivencia te sale un **Wither** encima.
 - Los Iron Golems tienen Fuerza IV, Velocidad IV, Resistencia IV y Resistencia al Fuego.
-- Salen **Ender Quantum Creepers** a tu alrededor en cualquier bloque y con cualquier luz.
+- Salen **Ender Quantum Creepers** a tu alrededor en cualquier bloque y con cualquier luz: explosion enorme (un poco menos que un Gato Supernova).
 - Los creepers explotan el doble de rapido.
 - Se puede comer una segunda Hyper Golden Apple + (otros +2 corazones).
 - La tarta de calabaza es la peor comida del juego: da Dano Instantaneo IV.
