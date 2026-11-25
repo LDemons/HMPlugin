@@ -386,7 +386,7 @@ public class DifficultyManager {
     private void makeQuantum(Creeper creeper) {
         creeper.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "quantum_creeper"),
                 org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-        creeper.setExplosionRadius(25); // eléctrico: potencia x2 = 50 (Nacho: algo menos que el Gato Supernova, 200)
+        creeper.setExplosionRadius(60); // como el original (Quantum-Explosion-Power 60); eléctrico: potencia x2 = 120
         setSpecialName(creeper, "Ender Quantum Creeper", net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE);
     }
 
