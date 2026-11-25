@@ -51,6 +51,19 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     "<yellow>/hm resethealth <white>- Resetea tu vida a 10 corazones <gray>(Solo OP)");
             MessageUtils.send(player,
                     "<yellow>/hm beginning [tp] <white>- Dónde está el portal a The Beginning <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm evento <white>- Lanza un evento de dificultad al azar <gray>(Solo OP)");
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("evento")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+            if (!HM.LuckyDemon.utils.EventSlot.spin()) {
+                MessageUtils.send(player, "<red>Ya hay un evento de dificultad girando.");
+            }
             return true;
         }
 
@@ -513,7 +526,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
                     "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor", "finalmsg",
-                    "beginning");
+                    "beginning", "evento");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());

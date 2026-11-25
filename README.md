@@ -162,7 +162,11 @@ Salen en el menu de logros (tecla L), pestana **HM**.
 - **Duro como la piedra**: sobrevive a 3 explosiones en menos de 1 minuto.
 - **Yokoso Watashi no Soul Society**: se el primero en entrar a The Beginning.
 
+## Eventos
+
+- **Tragamonedas de eventos**: una tragamonedas arriba en el centro de la pantalla con las cabezas de los jugadores que tienen evento propio y signos de pregunta. Si cae en una cabeza sale el evento de ese jugador; si cae en "?", un evento del server al azar, con un cuadro en el chat que explica que hay que hacer. Por ahora la gira un OP con `/hm evento` y los eventos solo se anuncian.
+
 ## Comandos
 
-- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva).
+- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva), `evento` (OP: gira la tragamonedas de eventos).
 - `/hmreload` (alias `/hmr`), permiso `hmplugin.reload`.

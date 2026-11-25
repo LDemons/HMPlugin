@@ -211,6 +211,82 @@ def pale(img):
     return out
 
 
+# Tragamonedas de eventos (EventSlot): se dibuja en el texto de una barra de jefe blanca (arriba, donde va el tab)
+# 1 pixel = 1 unidad de la GUI. Caracteres: E100-E102 marco (luces A, luces B, todo encendido), E103 "?",
+# E104... cabezas en el orden de SLOT_HEADS (debe coincidir con EventSlot.PLAYER_EVENTS)
+SLOT_HEADS = ["Palgato", "Pelaoordinario", "Eledimins"]
+SLOT_FIRST = 0xE100
+SLOT_W, SLOT_H, SLOT_SYM = 100, 36, 24
+SLOT_WINDOWS = (4, 36, 68)  # x de cada ventana de 28x28 (y = 4); el simbolo va 2 pixeles adentro
+QUESTION = ["..XXXX..", ".XX..XX.", ".....XX.", "....XX..", "...XX...", "...XX...", "........", "...XX..."]
+
+
+def slot_panel(lights):
+    img = Image.new("RGBA", (SLOT_W, SLOT_H), (20, 5, 5, 255))
+    px = img.load()
+    for x in range(1, SLOT_W - 1):
+        for y in range(1, SLOT_H - 1):
+            px[x, y] = (200, 150, 40, 255) if x < 4 or x >= SLOT_W - 4 or y < 4 or y >= SLOT_H - 4 else (90, 15, 20, 255)
+    for wx in SLOT_WINDOWS:
+        for x in range(wx, wx + 28):
+            for y in range(4, 32):
+                if x in (wx, wx + 27) or y in (4, 31):
+                    px[x, y] = (30, 20, 20, 255)
+                else:
+                    f = 1 - 0.35 * (abs(y - 17.5) / 13) ** 2  # mas oscuro arriba y abajo: parece un rodillo
+                    px[x, y] = (int(235 * f), int(228 * f), int(210 * f), 255)
+    for k, x in enumerate(range(3, SLOT_W - 4, 6)):
+        on = lights == "all" or (k % 2 == 0) == (lights == "a")
+        for y in (1, SLOT_H - 3):
+            for dx in (0, 1):
+                for dy in (0, 1):
+                    px[x + dx, y + dy] = (255, 240, 150, 255) if on else (120, 80, 20, 255)
+    return img
+
+
+def slot_question():
+    img = Image.new("RGBA", (SLOT_SYM, SLOT_SYM), (0, 0, 0, 0))
+    px = img.load()
+    filled = {(x, y) for y in range(SLOT_SYM) for x in range(SLOT_SYM) if QUESTION[y // 3][x // 3] == "X"}
+    for x in range(SLOT_SYM):
+        for y in range(SLOT_SYM):
+            if (x, y) in filled:
+                px[x, y] = (255, 200, 40, 255) if y % 12 > 1 else (255, 235, 140, 255)
+            elif any((x + dx, y + dy) in filled for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+                px[x, y] = (90, 50, 0, 255)
+    px[SLOT_SYM - 1, 0] = (0, 0, 0, 1)  # Minecraft recorta columnas transparentes a la derecha: fija el ancho
+    return img
+
+
+def slot_head(skin_png):
+    skin = Image.open(skin_png).convert("RGBA")
+    face = skin.crop((8, 8, 16, 16))
+    face.alpha_composite(skin.crop((40, 8, 48, 16)))  # capa del sombrero
+    return face.resize((SLOT_SYM, SLOT_SYM), Image.NEAREST)
+
+
+def add_slot(files, tex):
+    images = [slot_panel("a"), slot_panel("b"), slot_panel("all"), slot_question()]
+    images += [slot_head(tex / "cabezas" / f"{n}.png") for n in SLOT_HEADS]
+    providers = []
+    for i, img in enumerate(images):
+        buf = BytesIO()
+        img.save(buf, "PNG")
+        files[f"assets/{NAMESPACE}/textures/font/slot_{i:02d}.png"] = buf.getvalue()
+        # El texto de la barra empieza en y=3 de la pantalla: ascent 7 deja el marco desde ahi y los simbolos 6 mas abajo
+        providers.append({"type": "bitmap", "file": f"{NAMESPACE}:font/slot_{i:02d}.png",
+                          "ascent": 7 if i < 3 else 1, "height": img.height, "chars": [chr(SLOT_FIRST + i)]})
+    # Espacios para volver al inicio del marco y saltar entre ventanas (avance de un bitmap = ancho + 1)
+    providers.append({"type": "space", "advances": {"": -(SLOT_W + 1), "": 6, "": 7}})
+    files[f"assets/{NAMESPACE}/font/slot.json"] = json.dumps({"providers": providers}, indent=2).encode()
+    # La barra blanca queda invisible (solo la usa la tragamonedas; ni el plugin ni el juego usan blanca)
+    buf = BytesIO()
+    Image.new("RGBA", (182, 5), (0, 0, 0, 0)).save(buf, "PNG")
+    for part in ("background", "progress"):
+        files[f"assets/minecraft/textures/gui/sprites/boss_bar/white_{part}.png"] = buf.getvalue()
+    return images
+
+
 def build_pack(frames, out_zip):
     providers = []
     files = {}
@@ -248,6 +324,8 @@ def build_pack(frames, out_zip):
     put(f"assets/{NAMESPACE}/equipment/infernal_netherite.json", {"layers": {
         "humanoid": [{"texture": f"{NAMESPACE}:infernal_netherite", "dyeable": dyeable}],
         "humanoid_leggings": [{"texture": f"{NAMESPACE}:infernal_netherite", "dyeable": dyeable}]}})
+
+    add_slot(files, tex)
 
     for i, img in enumerate(frames):
         name = f"heart_{i:02d}.png"
