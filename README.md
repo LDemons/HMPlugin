@@ -136,6 +136,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 
 ## Dia 50
 - Los totems tienen 5% de probabilidad de fallar.
+- **Modo UHC**: durante el Death Train no hay regeneracion natural de vida en ningun mundo.
 - Los ravagers de las raids ya no sueltan totem.
 - Ganar una raid da Hero of the Village solo 5 minutos.
 - Romper un bloque quita medio corazon, salvo con herramientas de netherite (las de The Beginning).

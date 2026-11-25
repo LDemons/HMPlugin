@@ -119,6 +119,15 @@ public class BeginningManager implements Listener {
 
     /** Lo llama la muerte de un jugador al empezar o alargar el Death Train: cierra y saca a todos. */
     public void startDeathTrain() {
+        // DÍA 50: modo UHC (como el original): sin regeneración natural en ningún mundo mientras dure. Solo se
+        // anuncia al empezar, no cuando otra muerte alarga la tormenta
+        if (GameManager.getInstance().getDay() >= 50
+                && !overworld().getPersistentDataContainer().has(deathTrainKey)) {
+            for (World w : Bukkit.getWorlds()) {
+                w.setGameRule(org.bukkit.GameRule.NATURAL_REGENERATION, false);
+            }
+            Bukkit.broadcast(MessageUtils.format("<red>¡Ha comenzado el modo UHC! <gray>(sin regeneración natural hasta que acabe el Death Train)"));
+        }
         overworld().getPersistentDataContainer().set(deathTrainKey, PersistentDataType.BYTE, (byte) 1);
         if (world == null || GameManager.getInstance().getDay() < ENTER_DAY || world.getPlayers().isEmpty()) return;
         Bukkit.broadcast(MessageUtils.format("<yellow>The Beginning ha cerrado durante el Death Train."));
@@ -224,8 +233,18 @@ public class BeginningManager implements Listener {
     /** Al acabar la tormenta del Overworld se acaba el Death Train y The Beginning vuelve a abrir. */
     @EventHandler(ignoreCancelled = true)
     public void onStormEnd(WeatherChangeEvent e) {
-        if (!e.toWeatherState() && e.getWorld().equals(overworld())) {
+        if (!e.toWeatherState() && e.getWorld().equals(overworld())
+                && e.getWorld().getPersistentDataContainer().has(deathTrainKey)) {
             e.getWorld().getPersistentDataContainer().remove(deathTrainKey);
+            // Fin del modo UHC (se devuelve aunque el día haya bajado de 50 entre medio)
+            for (World w : Bukkit.getWorlds()) {
+                if (Boolean.FALSE.equals(w.getGameRuleValue(org.bukkit.GameRule.NATURAL_REGENERATION))) {
+                    w.setGameRule(org.bukkit.GameRule.NATURAL_REGENERATION, true);
+                }
+            }
+            if (GameManager.getInstance().getDay() >= 50) {
+                Bukkit.broadcast(MessageUtils.format("<green>Ha terminado el modo UHC: vuelve la regeneración natural."));
+            }
         }
     }
 
