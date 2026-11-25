@@ -35,6 +35,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             MessageUtils.send(player, "<yellow>/hm items <white>- Entrega ítems especiales <gray>(Solo OP)");
             MessageUtils.send(player,
                     "<yellow>/hm infernal <white>- Herramientas de netherite y armadura de Netherite Infernal <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm manzanas <white>- Super y Hyper Golden Apple + <gray>(Solo OP)");
             MessageUtils.send(player, "<yellow>/hm awake <white>- Muestra tiempo sin dormir y riesgo de Phantoms");
             MessageUtils.send(player,
                     "<yellow>/hm netheriteArmor <white>- Obtener armadura completa de Netherite <gray>(Día 25-29, Solo OP)");
@@ -109,6 +111,16 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             player.getInventory().addItem(HMItems.craftInfernalHelmet(), HMItems.craftInfernalChestplate(),
                     HMItems.craftInfernalLeggings(), HMItems.craftInfernalBoots());
             MessageUtils.send(player, "<green>Herramientas de netherite y armadura de Netherite Infernal entregadas.");
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("manzanas")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+            player.getInventory().addItem(HMItems.createSuperGoldenApple(), HMItems.createHyperGoldenApple());
+            MessageUtils.send(player, "<green>Super y Hyper Golden Apple + entregadas.");
             return true;
         }
 
@@ -545,7 +557,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
                     "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor", "finalmsg",
-                    "beginning", "evento", "infernal");
+                    "beginning", "evento", "infernal", "manzanas");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());

@@ -170,7 +170,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - La tarta de calabaza da 5 s de Saturacion. El ojo de arana, la carne podrida, la patata venenosa y el pez globo dejan su efecto para siempre.
 - Todos los ravagers del Overworld (los de raids y los que salen de animales de granja) son **Ultra Ravagers**: 250 corazones, Speed II y Fuerza II, sin jinetes. No sueltan nada.
 - El 20% de los pigmans salen montados (antes 5%). Los drops del Ultra Ravager, Carlos y Jess bajan al 33%.
-- Los osos polares, en vez de pegarte, explotan.
+- Los osos polares, en vez de pegarte, explotan como un creeper normal.
 - **Bacalao de la Muerte**: todo bacalao lleva una espada de madera con Filo L y Empuje C.
 - Esqueletos de clase mas fuertes: Guerrero con 50 corazones; Infernal con hacha de diamante Fire Aspect XX y Filo XXV; Asesino con ballesta Filo L; Tactico con arco Punch L y Power XL; Pesadilla con arco Power LX.
 - **Wither Skeleton Emperador**: 1 de cada 50 wither skeletons del Nether. 40 corazones, estandarte y armadura de oro, arco con Power C y Punch V. Las flechas no le hacen dano. 50% de soltar una espada de netherite irrompible.
@@ -208,5 +208,5 @@ Salen en el menu de logros (tecla L), pestana **HM**.
 
 ## Comandos
 
-- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva), `evento` (OP: gira la tragamonedas de eventos), `infernal` (OP: herramientas de netherite irrompibles y armadura de Netherite Infernal completa).
+- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva), `evento` (OP: gira la tragamonedas de eventos), `infernal` (OP: herramientas de netherite irrompibles y armadura de Netherite Infernal completa), `manzanas` (OP: una Super y una Hyper Golden Apple +).
 - `/hmreload` (alias `/hmr`), permiso `hmplugin.reload`.

@@ -2,7 +2,6 @@ package HM.LuckyDemon.recipes;
 
 import HM.LuckyDemon.HMPlugin;
 import HM.LuckyDemon.items.HMItems;
-import HM.LuckyDemon.utils.ItemBuilder;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -96,13 +95,7 @@ public class RecipeManager {
 
         private static void registerGaps() {
                 // Hyper Golden Apple (Bloques de oro + Manzana dorada)
-                ItemStack hyperGap = new ItemBuilder(Material.GOLDEN_APPLE)
-                                .name("<gold>Hyper Golden Apple +")
-                                .unbreakable(true) // Marca visual
-                                .pdc("gap_type", "hyper")
-                                .build();
-
-                registerShaped("hyper_gap", hyperGap,
+                registerShaped("hyper_gap", HMItems.createHyperGoldenApple(),
                                 "GGG",
                                 "GAG",
                                 "GGG",

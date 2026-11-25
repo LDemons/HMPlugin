@@ -235,7 +235,9 @@ public class Day50Listener implements Listener {
             // El Veneno I del juego llega después y no pisa uno más fuerte
             p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 20 * 15, 2));
             p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 20 * 10, 0));
-        } else if (e.getDamager() instanceof org.bukkit.entity.PolarBear bear) {
+        } else if (e.getDamager() instanceof org.bukkit.entity.PolarBear bear
+                && e.getCause() == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
+            // Solo su golpe: el daño de su propia explosión también llega con el oso como atacante
             // Como el original: en vez de pegar se queda quieto, suena a creeper y explota medio segundo después
             e.setCancelled(true);
             if (!bear.hasAI()) return; // ya está por explotar
@@ -243,7 +245,7 @@ public class Day50Listener implements Listener {
             bear.getWorld().playSound(bear.getLocation(), org.bukkit.Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.0f);
             Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                 if (!bear.isValid()) return;
-                bear.getWorld().createExplosion(bear.getLocation(), 1.5f, true, false, bear);
+                bear.getWorld().createExplosion(bear.getLocation(), 3f, false, true, bear); // como un creeper normal
                 bear.remove();
             }, 10L);
         } else if (e.getDamager().getPersistentDataContainer().has(key("death_cod"))) {

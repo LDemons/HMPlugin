@@ -20,6 +20,14 @@ public class HMItems {
                 .build();
     }
 
+    public static ItemStack createHyperGoldenApple() {
+        return new ItemBuilder(Material.GOLDEN_APPLE)
+                .name("<gold>Hyper Golden Apple +")
+                .unbreakable(true) // Marca visual
+                .pdc("gap_type", "hyper")
+                .build();
+    }
+
     public static ItemStack createEndRelic() {
         return new ItemBuilder(Material.LIGHT_BLUE_DYE)
                 .name("<gold>Reliquia del Fin")
