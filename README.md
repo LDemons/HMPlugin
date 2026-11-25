@@ -133,6 +133,26 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - **Armadura de Netherite Infernal** (roja): una pieza de netherite en el centro de la mesa y 4 Bloques de Netherite
   Infernal arriba, abajo y a los lados. Conserva los encantamientos de la pieza.
 
+## Dia 50
+- Los totems tienen 5% de probabilidad de fallar.
+- Los ravagers de las raids ya no sueltan totem.
+- Ganar una raid da Hero of the Village solo 5 minutos.
+- Romper un bloque quita medio corazon, salvo con herramientas de netherite (las de The Beginning).
+- Fundir hierro u oro da pepitas en vez de lingotes.
+- Te ahogas 5 veces mas rapido.
+- Estar sobre arena de almas da Slowness II.
+- Mucha mas ceguera bajo la lluvia.
+- Los mobs hostiles tienen Resistencia al Fuego.
+- Las arañas de cueva ya no pueden tener Glowing.
+- Los Creepers Electricos pasan a ser **Quantum Creepers** (explosion mas grande y x5 de dano) y el 20% son **Ender Creepers**.
+- No se puede recoger lava ni agua con un cubo (los cubos llenos que ya tengas siguen sirviendo).
+- De noche, en el Overworld, a veces te da Levitacion de 3 a 20 segundos.
+- En el Nether llueven pigmans: de vez en cuando caen de 1 a 3 en tres puntos sobre tu cabeza.
+- **Camello de Guerra**: todo camello lleva un **Husk Lancero** (lanza de hierro) y un esqueleto de clase.
+- **Giga Phantom**: phantom el doble de grande con 3 efectos al azar (sigue llevando su esqueleto). 1 de cada 100 viene con 4 **Ender Ghasts**.
+- Los Gatos Supernova pasan a ser **Gatos Galacticos**: ya no explotan, pero al morir, tras una cuenta atras de 5 s, invocan un mob
+  del plugin al azar (incluido un Gato Supernova, un Ultra Ravager o el **Permadeath Demon**, un dragon suelto de 1350 de vida que rompe bloques).
+
 ## Logros
 
 Salen en el menu de logros (tecla L), pestana **HM**.

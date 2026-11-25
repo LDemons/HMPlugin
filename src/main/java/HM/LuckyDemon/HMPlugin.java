@@ -71,6 +71,7 @@ public class HMPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40CraftListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40MobListener(), this);
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.PermadeathDemonListener(), this);
+        getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day50Listener(), this);
 
         // DÍA 40+: Modificaciones de loot
         getServer().getPluginManager().registerEvents(new HM.LuckyDemon.events.Day40LootListener(), this);

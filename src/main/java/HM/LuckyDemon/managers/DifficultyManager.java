@@ -112,12 +112,44 @@ public class DifficultyManager {
                             && player.getGameMode() != org.bukkit.GameMode.ADVENTURE)
                         continue;
 
-                    // DÍA 40: ceguera 1 min bajo la lluvia. La tarea corre cada 2 s: 1/5000 = 1/10000 por segundo
+                    // DÍA 40: ceguera 1 min bajo la lluvia. La tarea corre cada 2 s: 1/5000 = 1/10000 por segundo.
+                    // DÍA 50: 300/10000 por segundo, como el original (600 de 10000 cada 2 s)
                     if (currentDay >= 40 && player.getWorld().hasStorm()
                             && player.getLocation().getBlockY() >= player.getWorld()
                                     .getHighestBlockYAt(player.getLocation())
-                            && random.nextInt(5000) == 0) {
+                            && random.nextInt(5000) < (currentDay >= 50 ? 30 : 1)) {
                         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20 * 60, 0));
+                    }
+
+                    // DÍA 50: Slowness II sobre arena de almas (3 s, se renueva mientras siga encima)
+                    if (currentDay >= 50 && player.getLocation().subtract(0, 0.1, 0).getBlock()
+                            .getType() == org.bukkit.Material.SOUL_SAND) {
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 1));
+                    }
+
+                    // DÍA 50: Levitación de 3 a 20 s de noche en el Overworld, 1/10000 por segundo como el original
+                    // (la tarea corre cada 2 s: 1/5000)
+                    org.bukkit.World w = player.getWorld();
+                    long time = w.getTime();
+                    if (currentDay >= 50 && w.equals(Bukkit.getWorlds().get(0)) && time >= 13000 && time < 23000
+                            && random.nextInt(5000) == 0) {
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION,
+                                20 * (3 + random.nextInt(18)), 0));
+                    }
+
+                    // DÍA 50: lluvia de pigmans en el Nether (como el original: 10/4500 por segundo, 1-3 pigmans en
+                    // 3 puntos 25 bloques arriba, si el Nether tiene menos de 110 mobs)
+                    if (currentDay >= 50 && w.getEnvironment() == org.bukkit.World.Environment.NETHER
+                            && random.nextInt(4500) < 20 && w.getLivingEntities().size() < 110) {
+                        for (int[] off : new int[][] { { 10, -5 }, { 5, 5 }, { -5, 5 } }) {
+                            org.bukkit.Location l = player.getLocation().add(off[0], 25, off[1]);
+                            if (!l.getBlock().getType().isAir() || !l.clone().add(0, 1, 0).getBlock().getType().isAir()) {
+                                continue;
+                            }
+                            for (int i = random.nextInt(3); i >= 0; i--) {
+                                applyMobEffects((LivingEntity) w.spawnEntity(l, EntityType.ZOMBIFIED_PIGLIN));
+                            }
+                        }
                     }
 
                     // DÍA 40: Ravagers de Granja que ya tuvieron un jugador a 96 bloques vuelven a despawnear lejos
@@ -214,6 +246,64 @@ public class DifficultyManager {
         // Después del 30 para que el nombre del día 40 no lo pise el del 30
         if (currentDay >= 40) {
             applyDay40Effects(entity);
+        }
+        if (currentDay >= 50) {
+            applyDay50Effects(entity);
+        }
+    }
+
+    private void applyDay50Effects(LivingEntity entity) {
+        // Arañas de cueva sin Glowing (lo pueden sacar de los efectos al azar de las arañas)
+        if (entity.getType() == EntityType.CAVE_SPIDER) {
+            entity.removePotionEffect(PotionEffectType.GLOWING);
+        }
+        // Giga Phantom (como el original: tamaño 18 y 3 efectos al azar; sigue con su esqueleto del 40).
+        // 1 de cada 100 trae 4 Ender Ghasts
+        if (entity instanceof Phantom phantom) {
+            phantom.setSize(18);
+            List<PotionEffectType> effects = getAvailableEffects();
+            for (int i = 0; i < 3; i++) {
+                PotionEffectType type = effects.remove(random.nextInt(effects.size()));
+                phantom.addPotionEffect(new PotionEffect(type, PotionEffect.INFINITE_DURATION, getAmplifierForEffect(type)));
+            }
+            setSpecialName(phantom, "Giga Phantom", net.kyori.adventure.text.format.NamedTextColor.DARK_BLUE);
+            if (random.nextInt(100) == 0) {
+                for (int i = 0; i < 4; i++) {
+                    applyEnderGhastEffects((Ghast) phantom.getWorld().spawnEntity(phantom.getLocation(), EntityType.GHAST));
+                }
+            }
+        }
+        // Camello de Guerra: Husk Lancero delante (el que lo maneja) y esqueleto de clase detrás. Solo adultos: los
+        // que nacen criados por jugadores son bebés
+        if (entity instanceof Camel camel && camel.isAdult() && camel.getPassengers().isEmpty()) {
+            LivingEntity husk = (LivingEntity) camel.getWorld().spawnEntity(camel.getLocation(), EntityType.HUSK);
+            husk.getEquipment().setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_SPEAR));
+            setSpecialName(husk, "Husk Lancero", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+            camel.addPassenger(husk);
+            camel.addPassenger(spawnClassSkeleton(camel.getLocation(), random.nextInt(5) + 1));
+            setSpecialName(camel, "Camello de Guerra", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+        }
+        // Hostiles con Resistencia al Fuego (sin partículas: delatarían a los invisibles)
+        if (entity instanceof Enemy) {
+            entity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE,
+                    PotionEffect.INFINITE_DURATION, 0, false, false));
+        }
+        // Creepers Eléctricos -> 80% Quantum Creeper, 20% Ender Creeper (como el original). Los del End ya son
+        // Ender Creepers; la explosión x5 del Quantum la pone BeginningManager.onQuantumExplosion por la marca
+        if (entity instanceof Creeper creeper && creeper.isPowered()
+                && creeper.getWorld().getEnvironment() != org.bukkit.World.Environment.THE_END) {
+            org.bukkit.persistence.PersistentDataContainer pdc = creeper.getPersistentDataContainer();
+            org.bukkit.NamespacedKey quantum = new org.bukkit.NamespacedKey(plugin, "quantum_creeper");
+            if (pdc.has(quantum) || pdc.has(new org.bukkit.NamespacedKey(plugin, "ender_creeper"))) {
+                return;
+            }
+            if (random.nextInt(5) == 0) {
+                applyEnderCreeperEffects(creeper);
+            } else {
+                pdc.set(quantum, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                creeper.setExplosionRadius(7);
+                setSpecialName(creeper, "Quantum Creeper", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+            }
         }
     }
 
@@ -432,7 +522,16 @@ public class DifficultyManager {
             }
             case CAVE_SPIDER -> setSpecialName(entity, "Araña de Cueva Jinete",
                     net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE);
-            case CAT, OCELOT -> makeSupernovaCat(entity);
+            case CAT, OCELOT -> {
+                if (currentDay >= 50) {
+                    // DÍA 50: Gato Galáctico; ya no explota, invoca un mob al morir (Day50Listener)
+                    entity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "galactic_cat"),
+                            org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                    setSpecialName(entity, "Gato Galáctico", net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE);
+                } else {
+                    makeSupernovaCat(entity);
+                }
+            }
             case RABBIT -> {
                 // 1 de vida pero Speed 50 y 10 de daño (AggressiveMobGoal usa el atributo si pasa de 2)
                 entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(1);
@@ -621,6 +720,80 @@ public class DifficultyManager {
             cat.getWorld().createExplosion(cat.getLocation(), SUPERNOVA_POWER, true, true, cat);
             cat.remove();
         }, 20L * 30);
+    }
+
+    /**
+     * DÍA 50: al morir un Gato Galáctico, cuenta atrás de 5 s y sale un mob del plugin al azar (como el original).
+     * Lo que sale por spawnEntity es CUSTOM y onCreatureSpawn lo salta: los efectos se ponen a mano.
+     */
+    public void galacticCatDeath(org.bukkit.Location loc) {
+        org.bukkit.Chunk chunk = loc.getChunk();
+        chunk.addPluginChunkTicket(plugin);
+        Bukkit.broadcast(HM.LuckyDemon.utils.MessageUtils.format("<light_purple>La maldición de un Gato Galáctico ha comenzado en: "
+                + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() + " (" + loc.getWorld().getName() + ")"));
+        new org.bukkit.scheduler.BukkitRunnable() {
+            int time = 5;
+
+            @Override
+            public void run() {
+                if (time > 0) {
+                    Bukkit.broadcast(HM.LuckyDemon.utils.MessageUtils
+                            .format("<yellow>Un Gato Galáctico invocará un mob al azar en: <aqua>" + time));
+                    for (org.bukkit.entity.Player p : Bukkit.getOnlinePlayers()) {
+                        p.playSound(p.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
+                    }
+                    time--;
+                    return;
+                }
+                cancel();
+                chunk.removePluginChunkTicket(plugin);
+                String name = galacticSummon(loc);
+                Bukkit.broadcast(HM.LuckyDemon.utils.MessageUtils.format("<yellow>Un Gato Galáctico ha invocado: <red><bold>"
+                        + name + "</bold> <gray>(" + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() + ")"));
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private String galacticSummon(org.bukkit.Location loc) {
+        org.bukkit.World w = loc.getWorld();
+        switch (random.nextInt(12)) {
+            case 0 -> {
+                makeSupernovaCat((LivingEntity) w.spawnEntity(loc, EntityType.CAT));
+                return "Gato Supernova";
+            }
+            case 1 -> {
+                spawnUltraRavager((LivingEntity) w.spawnEntity(loc, EntityType.ZOMBIFIED_PIGLIN));
+                return "Ultra Ravager";
+            }
+            case 2 -> {
+                // Como el original: dragón suelto con nombre y 1350 de vida, sin los ataques del End
+                org.bukkit.entity.EnderDragon demon = w.spawn(loc, org.bukkit.entity.EnderDragon.class);
+                demon.setPhase(org.bukkit.entity.EnderDragon.Phase.LEAVE_PORTAL);
+                demon.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(1350);
+                demon.setHealth(demon.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue());
+                setSpecialName(demon, "PERMADEATH DEMON", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+                demon.setCustomNameVisible(true);
+                return "Permadeath Demon";
+            }
+            case 3 -> {
+                spawnClassSkeleton(loc, random.nextInt(5) + 1);
+                return "Esqueleto de Clase";
+            }
+            case 4 -> {
+                applyEnderGhastEffects((Ghast) w.spawnEntity(loc, EntityType.GHAST));
+                return "Ender Ghast";
+            }
+            default -> {
+                EntityType[] types = { EntityType.SLIME, EntityType.MAGMA_CUBE, EntityType.WITCH, EntityType.PHANTOM,
+                        EntityType.CAVE_SPIDER, EntityType.SILVERFISH, EntityType.CREEPER };
+                LivingEntity mob = (LivingEntity) w.spawnEntity(loc, types[random.nextInt(types.length)]);
+                applyMobEffects(mob);
+                net.kyori.adventure.text.Component custom = mob.customName();
+                return custom != null
+                        ? net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(custom)
+                        : mob.getName();
+            }
+        }
     }
 
     /** Cambia un mob por otro del tipo dado en el mismo lugar y le aplica los efectos del día. */

@@ -57,7 +57,7 @@ public class TotemFailListener implements Listener {
         }
 
         // Calcular probabilidad de fallo
-        int failChance = currentDay >= 40 ? 3 : 1; // 3% en día 40+, 1% en día 30-39
+        int failChance = currentDay >= 50 ? 5 : currentDay >= 40 ? 3 : 1; // 5% día 50+, 3% día 40+, 1% día 30-39
         int roll = random.nextInt(100) + 1; // 1-100
         boolean failed = roll <= failChance;
 

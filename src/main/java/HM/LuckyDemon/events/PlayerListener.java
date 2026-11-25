@@ -430,8 +430,9 @@ public class PlayerListener implements Listener {
             e.setDroppedExp(0);
         }
 
-        // Ravager especial con Tótem de Inmortalidad
-        if (e.getEntity() instanceof org.bukkit.entity.Ravager) {
+        // Ravager especial con Tótem de Inmortalidad (DÍA 50: los de raids ya no; los evokers no sueltan nada desde el 20)
+        if (e.getEntity() instanceof org.bukkit.entity.Ravager raidCheck
+                && !(GameManager.getInstance().getDay() >= 50 && raidCheck.getRaid() != null)) {
             org.bukkit.entity.Ravager ravager = (org.bukkit.entity.Ravager) e.getEntity();
 
             // Verificar si tiene chance de drop configurado (Día 25+)
