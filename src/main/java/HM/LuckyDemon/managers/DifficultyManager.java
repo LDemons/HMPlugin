@@ -102,7 +102,7 @@ public class DifficultyManager {
     private static final int TRANSFORMED_SPAWN_TICKS = 200;
     // Vanilla intenta cada tick; 200 (10 s) casi no sacaba nada
     private static final int MONSTER_SPAWN_TICKS = 20;
-    private static final int MONSTER_LIMIT = 100;
+    private static final int MONSTER_LIMIT = 120;
 
     public int getDifficultyLevel() {
         return difficultyLevel;

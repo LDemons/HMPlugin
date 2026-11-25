@@ -19,7 +19,7 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 
 ## Dia 10
 
-- Mas mobs hostiles en el Overworld y el End: el tope pasa de 70 a 100 (el Nether queda en 70). En el Overworld y el Nether los mobs aparecen mas despacio (no reaparecen al instante al matarlos). Nunca mas de 8 magma cubes naturales alrededor de cada jugador.
+- Mas mobs hostiles en el Overworld y el End: el tope pasa de 70 a 120 (el Nether queda en 70). En el Overworld y el Nether los mobs aparecen mas despacio (no reaparecen al instante al matarlos). Nunca mas de 8 magma cubes naturales alrededor de cada jugador.
 - Para pasar la noche hay que ser al menos 4 jugadores conectados.
 - Aranas con 1 a 3 efectos aleatorios (Speed III, Fuerza IV, Salto V, Regeneracion IV, Resistencia III, Invisibilidad, Glowing o Caida Lenta).
 - Creaking con Fuerza I y Speed I.
