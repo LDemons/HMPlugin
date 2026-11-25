@@ -205,7 +205,7 @@ public class DifficultyManager {
 
                             if (mob instanceof Animals || mob instanceof AbstractVillager || mob instanceof Fish
                                     || mob instanceof Axolotl || mob instanceof Squid || mob instanceof Dolphin
-                                    || mob instanceof org.bukkit.entity.Bat) {
+                                    || mob instanceof org.bukkit.entity.Bat || mob instanceof Giant) {
 
                                 // SKIP Squids y Bats en día 30+ (se transforman)
                                 if (isDay30OrLater && isSquidOrBat) {
@@ -292,6 +292,54 @@ public class DifficultyManager {
             camel.addPassenger(spawnClassSkeleton(camel.getLocation(), random.nextInt(5) + 1));
             setSpecialName(camel, "Camello de Guerra", net.kyori.adventure.text.format.NamedTextColor.GOLD);
         }
+        int forever = PotionEffect.INFINITE_DURATION;
+        switch (entity.getType()) {
+            case IRON_GOLEM -> entity.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, forever, 1));
+            case VEX -> entity.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, forever, 2));
+            case DROWNED -> entity.getEquipment().setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.TRIDENT));
+            case VINDICATOR -> {
+                org.bukkit.inventory.ItemStack axe = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_AXE);
+                axe.addEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, 5);
+                entity.getEquipment().setItemInMainHand(axe);
+            }
+            case BEE -> entity.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE).setBaseValue(30); // 15 corazones
+            case BLAZE -> setMaxHealth(entity, 200); // 100 corazones
+            case SHULKER -> entity.setInvulnerable(true); // todos son explosivos desde el 30
+            case PUFFERFISH -> {
+                entity.setInvulnerable(true);
+                setSpecialName(entity, "Pufferfish Invulnerable", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+            }
+            case COD -> makeDeathCod(entity);
+            case STRIDER -> {
+                // Strider Jinete: un Piglin Brute encima (solo adultos sin jinete; el vanilla a veces trae uno)
+                if (((Ageable) entity).isAdult() && entity.getPassengers().isEmpty()) {
+                    LivingEntity brute = (LivingEntity) entity.getWorld().spawnEntity(entity.getLocation(),
+                            EntityType.PIGLIN_BRUTE);
+                    applyMobEffects(brute); // Resistencia al Fuego del 50: cruza lava encima del strider
+                    entity.addPassenger(brute);
+                    entity.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "rider_mount"),
+                            org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                    setSpecialName(entity, "Strider Jinete", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+                }
+            }
+            case WITHER_SKELETON -> {
+                if (entity.getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER && random.nextInt(50) == 0) {
+                    makeWitherEmperor(entity);
+                }
+            }
+            default -> {
+            }
+        }
+        // Giga Slimes y Giga Magma Cubes con el doble de vida (la vida de un slime es tamaño²; el Giga Slime ya
+        // tenía x2 desde el 25). Se calcula desde el tamaño para no duplicarla si se aplica dos veces
+        org.bukkit.persistence.PersistentDataContainer gigaPdc = entity.getPersistentDataContainer();
+        if (entity instanceof Slime slime) {
+            if (gigaPdc.has(new org.bukkit.NamespacedKey(plugin, "giga_slime"))) {
+                setMaxHealth(slime, slime.getSize() * slime.getSize() * 4);
+            } else if (gigaPdc.has(new org.bukkit.NamespacedKey(plugin, "giga_magma"))) {
+                setMaxHealth(slime, slime.getSize() * slime.getSize() * 2);
+            }
+        }
         // Hostiles con Resistencia al Fuego (sin partículas: delatarían a los invisibles)
         if (entity instanceof Enemy) {
             entity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE,
@@ -314,6 +362,82 @@ public class DifficultyManager {
                 setSpecialName(creeper, "Quantum Creeper", net.kyori.adventure.text.format.NamedTextColor.GOLD);
             }
         }
+    }
+
+    /**
+     * DÍA 50: Bacalao de la Muerte (como el original: espada de madera con Filo L y Empuje C). Ataca por la IA de
+     * marinos agresivos del 20, que pega con ATTACK_DAMAGE: espada de madera 4 + Filo L 25.5. El empuje lo pone
+     * Day50Listener.onDay50Hit
+     */
+    private void makeDeathCod(LivingEntity cod) {
+        org.bukkit.inventory.ItemStack sword = new org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD);
+        sword.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, 50);
+        sword.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.KNOCKBACK, 100);
+        cod.getEquipment().setItemInMainHand(sword);
+        cod.getEquipment().setItemInMainHandDropChance(0);
+        if (cod.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE) == null) {
+            cod.registerAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+        }
+        cod.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE).setBaseValue(29.5);
+        cod.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "death_cod"),
+                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        setSpecialName(cod, "Bacalao de la Muerte", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+    }
+
+    /**
+     * DÍA 50: Wither Skeleton Emperador (1 de cada 50 del Nether, como el original): 40 corazones, estandarte negro
+     * con dibujo dorado, armadura de oro y arco con Poder C y Empuje V. Las flechas no le hacen daño y suelta una
+     * espada de netherite al 50% (Day50Listener)
+     */
+    private void makeWitherEmperor(LivingEntity skeleton) {
+        org.bukkit.inventory.ItemStack banner = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BLACK_BANNER);
+        org.bukkit.inventory.meta.BannerMeta meta = (org.bukkit.inventory.meta.BannerMeta) banner.getItemMeta();
+        meta.setPatterns(List.of(
+                new org.bukkit.block.banner.Pattern(org.bukkit.DyeColor.YELLOW, org.bukkit.block.banner.PatternType.STRAIGHT_CROSS),
+                new org.bukkit.block.banner.Pattern(org.bukkit.DyeColor.BLACK, org.bukkit.block.banner.PatternType.BRICKS),
+                new org.bukkit.block.banner.Pattern(org.bukkit.DyeColor.BLACK, org.bukkit.block.banner.PatternType.STRIPE_MIDDLE),
+                new org.bukkit.block.banner.Pattern(org.bukkit.DyeColor.YELLOW, org.bukkit.block.banner.PatternType.FLOWER),
+                new org.bukkit.block.banner.Pattern(org.bukkit.DyeColor.BLACK, org.bukkit.block.banner.PatternType.TRIANGLE_TOP),
+                new org.bukkit.block.banner.Pattern(org.bukkit.DyeColor.RED, org.bukkit.block.banner.PatternType.GRADIENT_UP)));
+        banner.setItemMeta(meta);
+        org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
+        bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 100);
+        bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 5);
+        org.bukkit.inventory.EntityEquipment eq = skeleton.getEquipment();
+        eq.setHelmet(banner);
+        eq.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_CHESTPLATE));
+        eq.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_LEGGINGS));
+        eq.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_BOOTS));
+        eq.setItemInMainHand(bow);
+        eq.setItemInOffHand(null); // sin las flechas de Daño II de los esqueletos de clase
+        eq.setHelmetDropChance(0);
+        eq.setChestplateDropChance(0);
+        eq.setLeggingsDropChance(0);
+        eq.setBootsDropChance(0);
+        eq.setItemInMainHandDropChance(0);
+        skeleton.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "wither_emperor"),
+                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        setMaxHealth(skeleton, 80);
+        setSpecialName(skeleton, "Wither Skeleton Emperador", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+    }
+
+    /**
+     * DÍA 50: Gigante (1 de cada 500 zombies en Plains, como el original): 300 corazones y golpe de 2000 (el del
+     * original). En vanilla no tiene IA: lleva la de los mobs agresivos (el escáner se la vuelve a poner al recargar).
+     * Suelta el Arco de Gigante (Day50Listener)
+     */
+    private void makeGiant(LivingEntity giant) {
+        setMaxHealth(giant, 600);
+        giant.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE).setBaseValue(2000);
+        giant.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "hm_giant"),
+                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        makeAggressive((Mob) giant, 2000);
+        setSpecialName(giant, "Gigante", net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
+    }
+
+    private static void setMaxHealth(LivingEntity entity, double health) {
+        entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(health);
+        entity.setHealth(health);
     }
 
     /** Nombre de mob especial (desde el día 30 cada mob modificado lleva el suyo). Oculto, sale en las muertes. */
@@ -467,6 +591,48 @@ public class DifficultyManager {
                 org.bukkit.persistence.PersistentDataType.BYTE)) {
             return false;
         }
+        // DÍA 50: pollos -> silverfish (en vez de ravager), salmones -> pufferfish invulnerables (máx. 2 a 15
+        // bloques, como el original) y 1% de los pillagers -> evoker
+        if (currentDay >= 50) {
+            switch (entity.getType()) {
+                case CHICKEN -> {
+                    replaceMob(entity, EntityType.SILVERFISH);
+                    return true;
+                }
+                case SALMON -> {
+                    if (entity.getLocation().getNearbyEntitiesByType(org.bukkit.entity.PufferFish.class, 15).size() < 2) {
+                        replaceMob(entity, EntityType.PUFFERFISH);
+                    } else {
+                        entity.remove();
+                    }
+                    return true;
+                }
+                case PILLAGER -> {
+                    if (random.nextInt(100) == 0) {
+                        replaceMob(entity, EntityType.EVOKER);
+                        return true;
+                    }
+                }
+                case ZOMBIE -> {
+                    org.bukkit.block.Biome biome = entity.getLocation().getBlock().getBiome();
+                    if ((biome == org.bukkit.block.Biome.PLAINS || biome == org.bukkit.block.Biome.SUNFLOWER_PLAINS)
+                            && random.nextInt(500) == 0) {
+                        makeGiant((LivingEntity) entity.getWorld().spawnEntity(entity.getLocation(), EntityType.GIANT));
+                        entity.remove();
+                        return true;
+                    }
+                }
+                case RAVAGER -> {
+                    if (entity.getWorld().getEnvironment() == org.bukkit.World.Environment.NORMAL
+                            && !entity.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(plugin, "day40_boss"))) {
+                        ultraRavagerFrom(entity);
+                        return true;
+                    }
+                }
+                default -> {
+                }
+            }
+        }
         // getType() y no instanceof: CaveSpider es Spider y Husk/Drowned son Zombie (se reemplazarían en bucle)
         switch (entity.getType()) {
             case SPIDER -> replaceMob(entity, EntityType.CAVE_SPIDER); // el nombre se lo pone applyDay40Effects
@@ -482,13 +648,15 @@ public class DifficultyManager {
             case WOLF -> replaceMob(entity, EntityType.CAT); // el gato sale Supernova (applyDay40Effects)
             case NAUTILUS -> replaceNautilus(entity); // los naturales ni llegan: PlayerListener.onCreatureSpawn
             case COW, MOOSHROOM, SHEEP, PIG, CHICKEN -> {
-                LivingEntity ravager = replaceMob(entity, EntityType.RAVAGER);
+                LivingEntity ravager = currentDay >= 50 ? ultraRavagerFrom(entity) : replaceMob(entity, EntityType.RAVAGER);
                 // Los chunks nuevos se generan a ~160 bloques y un monstruo a más de 128 de un jugador se borra al
                 // instante: nace sin despawn y el escáner se lo devuelve cuando un jugador pasa cerca
                 ravager.setRemoveWhenFarAway(false);
                 ravager.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "farm_ravager"),
                         org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-                setSpecialName(ravager, "Ravager de Granja", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+                if (currentDay < 50) {
+                    setSpecialName(ravager, "Ravager de Granja", net.kyori.adventure.text.format.NamedTextColor.GOLD);
+                }
             }
             case ENDERMAN -> {
                 if (entity.getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
@@ -588,7 +756,7 @@ public class DifficultyManager {
                 }
             }
             case ZOMBIFIED_PIGLIN -> {
-                if (random.nextInt(100) < MOUNTED_PIGMAN_PERCENT) {
+                if (random.nextInt(100) < (currentDay >= 50 ? 20 : MOUNTED_PIGMAN_PERCENT)) {
                     mountPigman(entity);
                 }
             }
@@ -658,13 +826,10 @@ public class DifficultyManager {
      */
     private void spawnUltraRavager(LivingEntity carlos) {
         org.bukkit.Location loc = carlos.getLocation();
-        LivingEntity ravager = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.RAVAGER);
+        LivingEntity ravager = newUltraRavager(loc);
         LivingEntity jess = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.VILLAGER);
-        setBoss(ravager, "ultra_ravager", "Ultra Ravager", 500);
         setBoss(carlos, "carlos", "Carlos el Esclavo", 150);
         setBoss(jess, "jess", "Jess la Emperatriz", 240);
-        ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
-        ravager.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
 
         org.bukkit.inventory.ItemStack sword = new org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD);
         sword.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.KNOCKBACK, 10);
@@ -688,6 +853,26 @@ public class DifficultyManager {
 
         carlos.addPassenger(jess);
         ravager.addPassenger(carlos);
+    }
+
+    /** Ravager de 250 corazones con Speed II y Fuerza II: la base del Ultra Ravager, con o sin Carlos y Jess. */
+    private LivingEntity newUltraRavager(org.bukkit.Location loc) {
+        LivingEntity ravager = (LivingEntity) loc.getWorld().spawnEntity(loc, EntityType.RAVAGER);
+        setBoss(ravager, "ultra_ravager", "Ultra Ravager", 500);
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, Integer.MAX_VALUE, 1));
+        return ravager;
+    }
+
+    /**
+     * DÍA 50: los ravagers del Overworld (raids y los que salen de animales de granja) pasan a Ultra Ravager. Como el
+     * original, este va solo (Carlos y Jess son del pigman montado) y fuera del Nether no suelta nada
+     * (Day40MobListener.onDay40Drops).
+     */
+    private LivingEntity ultraRavagerFrom(LivingEntity old) {
+        LivingEntity ravager = newUltraRavager(old.getLocation());
+        old.remove();
+        return ravager;
     }
 
     private void setBoss(LivingEntity mob, String id, String name, double health) {
@@ -765,7 +950,7 @@ public class DifficultyManager {
 
     private String galacticSummon(org.bukkit.Location loc) {
         org.bukkit.World w = loc.getWorld();
-        switch (random.nextInt(12)) {
+        switch (random.nextInt(14)) {
             case 0 -> {
                 makeSupernovaCat((LivingEntity) w.spawnEntity(loc, EntityType.CAT));
                 return "Gato Supernova";
@@ -791,6 +976,14 @@ public class DifficultyManager {
             case 4 -> {
                 applyEnderGhastEffects((Ghast) w.spawnEntity(loc, EntityType.GHAST));
                 return "Ender Ghast";
+            }
+            case 5 -> {
+                makeGiant((LivingEntity) w.spawnEntity(loc, EntityType.GIANT));
+                return "Gigante";
+            }
+            case 6 -> {
+                makeWitherEmperor((LivingEntity) w.spawnEntity(loc, EntityType.WITHER_SKELETON));
+                return "Wither Skeleton Emperador";
             }
             default -> {
                 EntityType[] types = { EntityType.SLIME, EntityType.MAGMA_CUBE, EntityType.WITCH, EntityType.PHANTOM,
@@ -900,17 +1093,16 @@ public class DifficultyManager {
             setSpecialName(entity, "Zombie Jinete", net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
         }
 
-        // DÍA 30: Todos los esqueletos tienen clase aleatoria
-        if (entity instanceof org.bukkit.entity.Skeleton ||entity instanceof org.bukkit.entity.WitherSkeleton) {
+        // DÍA 30: Todos los esqueletos normales tienen clase aleatoria. Los wither skeletons solo la llevan cuando los
+        // crea el plugin (jinetes, clases 1 y 5 de un esqueleto normal): los naturales del Nether van sin clase
+        if (entity instanceof org.bukkit.entity.Skeleton) {
             // Verificar si ya tiene una clase asignada (para no sobrescribir jinetes de
             // arañas)
             org.bukkit.NamespacedKey classKey = new org.bukkit.NamespacedKey(plugin, "skeleton_class");
             if (!entity.getPersistentDataContainer().has(classKey, org.bukkit.persistence.PersistentDataType.INTEGER)) {
-                // Wither skeletons solo toman clases wither (1 o 5); esqueletos normales cualquiera (1-5)
-                boolean isWither = entity instanceof org.bukkit.entity.WitherSkeleton;
-                int skeletonClass = isWither ? (random.nextBoolean() ? 1 : 5) : random.nextInt(5) + 1;
+                int skeletonClass = random.nextInt(5) + 1;
 
-                if (!isWither && isWitherClass(skeletonClass)) {
+                if (isWitherClass(skeletonClass)) {
                     // Clase wither en un esqueleto normal: reemplazarlo por un wither skeleton (y re-montarlo)
                     Entity vehicle = entity.getVehicle();
                     LivingEntity replacement = spawnClassSkeleton(entity.getLocation(), skeletonClass);
@@ -1163,14 +1355,16 @@ public class DifficultyManager {
 
         // Del 20 al 29 version facil; desde el 30 se vuelven mas dificiles (imagenes de la lista)
         boolean hard = currentDay >= 30;
+        boolean d50 = currentDay >= 50; // del 50 al 59 (imagen de la lista)
         double health = 40.0;
 
         if (skeletonClass == 1) {
             // ESQUELETO TÁCTICO - Wither - Cota Malla - Punch XX (dia 30: Punch XXX + Power XXV) - 20❤
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, hard ? 30 : 20);
+            // dia 50: Punch L + Power XL
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, d50 ? 50 : hard ? 30 : 20);
             if (hard)
-                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 25);
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, d50 ? 40 : 25);
             equipment.setItemInMainHand(bow);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_CHESTPLATE));
@@ -1180,7 +1374,9 @@ public class DifficultyManager {
             // ESQUELETO INFERNAL - Normal - Hierro - Hacha de hierro Fire Aspect II, 10❤ (dia 30: diamante FA X, 20❤)
             org.bukkit.inventory.ItemStack axe = new org.bukkit.inventory.ItemStack(
                     hard ? org.bukkit.Material.DIAMOND_AXE : org.bukkit.Material.IRON_AXE);
-            axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, hard ? 10 : 2);
+            axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, d50 ? 20 : hard ? 10 : 2);
+            if (d50) // dia 50: Fire Aspect XX + Sharpness XXV
+                axe.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, 25);
             equipment.setItemInMainHand(axe);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_CHESTPLATE));
@@ -1210,6 +1406,9 @@ public class DifficultyManager {
                 health = 20.0;
             }
 
+            if (d50)
+                health = 100.0; // dia 50: 50❤
+
             equipment.setHelmet(helmet);
             equipment.setChestplate(chestplate);
             equipment.setLeggings(leggings);
@@ -1218,7 +1417,7 @@ public class DifficultyManager {
         } else if (skeletonClass == 4) {
             // ESQUELETO ASESINO - Normal - Oro - Ballesta Sharpness XX (dia 30: XXV + Velocidad II) - 20❤
             org.bukkit.inventory.ItemStack crossbow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.CROSSBOW);
-            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, hard ? 25 : 20);
+            crossbow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.SHARPNESS, d50 ? 50 : hard ? 25 : 20); // dia 50: L
             equipment.setItemInMainHand(crossbow);
             equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_HELMET));
             equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_CHESTPLATE));
@@ -1231,7 +1430,7 @@ public class DifficultyManager {
         } else if (skeletonClass == 5) {
             // ESQUELETO PESADILLA - Wither - Cuero Rojo - Power X (dia 30: Power L) - 20❤
             org.bukkit.inventory.ItemStack bow = new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW);
-            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, hard ? 50 : 10);
+            bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, d50 ? 60 : hard ? 50 : 10); // dia 50: LX
             equipment.setItemInMainHand(bow);
 
             org.bukkit.inventory.ItemStack helmet = new org.bukkit.inventory.ItemStack(
@@ -1314,7 +1513,7 @@ public class DifficultyManager {
 
         org.bukkit.attribute.AttributeInstance damageAttr = mob
                 .getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
-        if (damageAttr != null) {
+        if (damageAttr != null && damageAttr.getBaseValue() < damage) { // no bajar el de abejas, conejos o bacalaos
             damageAttr.setBaseValue(damage);
         }
 
@@ -1451,7 +1650,9 @@ public class DifficultyManager {
             }
 
             // Atacar si está cerca (3.0 bloques cuadrados = ~1.7 bloques) y lo ve (no a través de paredes)
-            if (distSq < 3.0 && attackCooldown == 0 && entity.hasLineOfSight(target)) {
+            // Alcance según el ancho del mob (un gigante pega desde ~4.6 bloques; los normales, ~1.7)
+            double reach = Math.max(3.0, Math.pow(entity.getWidth() + 1, 2));
+            if (distSq < reach && attackCooldown == 0 && entity.hasLineOfSight(target)) {
                 double finalDamage = damage;
                 // Usar el daño del atributo si es mayor (por si el mob tiene fuerza)
                 org.bukkit.attribute.AttributeInstance attr = entity

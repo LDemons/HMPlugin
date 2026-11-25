@@ -67,7 +67,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - **Ender Creeper** (End): electrico, invisible y esquiva las flechas teletransportandose.
 - **Ender Ghast** (End): reemplaza al 1% de los endermans y sale uno al romper cada cristal de los pilares.
 - **Permadeath Demon** (el dragon del End, tambien el que se respawnee): 1000 corazones y se cura la mitad. Las torres de obsidiana son de bedrock. Cada 30-90 s suelta 6 TNT (no rompen bloques, lanzan end stone), caen rayos cerca del portal y los cristales de los pilares vuelven a salir a los 1-8 min. Cada 60 s ataca: lluvia de rayos sobre los jugadores, nube verde de 15 s sobre 4 endermans (si mueren dentro, les salta un totem), o vision nocturna de aviso y a los 5 s una nube de Dano II donde estes. Al posarse en el portal suele girar 15 s rodeado de nubes de Dano IV. Su aliento convierte el end stone en bedrock. Con 300 corazones o menos se enfurece: ataca cada 40 s, los rayos tambien hacen dano y la mitad de su aliento es humo de Dano II que quita todos los efectos.
-- Todos los esqueletos tienen clase aleatoria y llevan flechas de Dano II. Las clases se vuelven mas dificiles (todas con 20 corazones): Tactico arco Punch XXX y Power XXV, Infernal hacha de diamante Fire Aspect X, Guerrero diamante con Proteccion IV, Asesino ballesta Sharpness XXV y Speed II, Pesadilla arco Power L.
+- Todos los esqueletos tienen clase aleatoria y llevan flechas de Dano II (los wither skeletons del Nether no; solo los jinetes de clase). Las clases se vuelven mas dificiles (todas con 20 corazones): Tactico arco Punch XXX y Power XXV, Infernal hacha de diamante Fire Aspect X, Guerrero diamante con Proteccion IV, Asesino ballesta Sharpness XXV y Speed II, Pesadilla arco Power L.
 - **Zombie Jinete**: los zombies salen montados en un caballo zombie.
 - Golems con Speed IV, endermans con Fuerza II, silverfish con 5 efectos.
 - Totems con 1% de fallo.
@@ -131,7 +131,8 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - No se pueden vaciar cubetas, no se pueden crear portales y nadie puede ser invisible.
 - Picar un bloque de Netherite Infernal con pico suelta un **Bloque de Netherite Infernal**.
 - **Armadura de Netherite Infernal** (roja): una pieza de netherite en el centro de la mesa y 4 Bloques de Netherite
-  Infernal arriba, abajo y a los lados. Conserva los encantamientos de la pieza.
+  Infernal arriba, abajo y a los lados. Conserva los encantamientos de la pieza. Irrompible; el set completo da +5 corazones
+  (en vez de los +4 de la Armadura Infernal) y Resistencia I mientras la lleves puesta.
 
 ## Dia 50
 - Los totems tienen 5% de probabilidad de fallar.
@@ -154,7 +155,26 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - **Camello de Guerra**: todo camello lleva un **Husk Lancero** (lanza de hierro) y un esqueleto de clase.
 - **Giga Phantom**: phantom el doble de grande con 3 efectos al azar (sigue llevando su esqueleto). 1 de cada 100 viene con 4 **Ender Ghasts**.
 - Los Gatos Supernova pasan a ser **Gatos Galacticos**: ya no explotan, pero al morir, tras una cuenta atras de 5 s, invocan un mob
-  del plugin al azar (incluido un Gato Supernova, un Ultra Ravager o el **Permadeath Demon**, un dragon suelto de 1350 de vida que rompe bloques).
+  del plugin al azar (incluido un Gato Supernova, un Ultra Ravager, un Gigante, un Wither Skeleton Emperador o el **Permadeath Demon**, un dragon suelto de 1350 de vida que rompe bloques).
+- Los pollos pasan a ser Silverfish (en vez de ravagers) y los salmones, **Pufferfish Invulnerables** (como mucho 2 juntos).
+- El 1% de los pillagers sale como Evoker.
+- Iron Golems con Resistencia II, Vex con Resistencia III y Blazes con 100 corazones.
+- Los Drowned llevan tridente y los Vindicators hacha de diamante con Filo V.
+- Las abejas hacen 15 corazones de dano.
+- Los Shulkers explosivos son invulnerables.
+- Los Giga Slimes y Giga Magma Cubes tienen el doble de vida.
+- Las aranas de cueva dan Veneno III y Nausea; los escupitajos de llama, Veneno III 30 s, Nausea 10 s y empujan fuerte.
+- La Mining Fatigue dura el doble y la leche no la quita.
+- Intentar dormir solo tiene un 10% de reiniciar el contador de Phantoms.
+- La tarta de calabaza da 5 s de Saturacion. El ojo de arana, la carne podrida, la patata venenosa y el pez globo dejan su efecto para siempre.
+- Todos los ravagers del Overworld (los de raids y los que salen de animales de granja) son **Ultra Ravagers**: 250 corazones, Speed II y Fuerza II, sin jinetes. No sueltan nada.
+- El 20% de los pigmans salen montados (antes 5%). Los drops del Ultra Ravager, Carlos y Jess bajan al 33%.
+- Los osos polares, en vez de pegarte, explotan.
+- **Bacalao de la Muerte**: todo bacalao lleva una espada de madera con Filo L y Empuje C.
+- Esqueletos de clase mas fuertes: Guerrero con 50 corazones; Infernal con hacha de diamante Fire Aspect XX y Filo XXV; Asesino con ballesta Filo L; Tactico con arco Punch L y Power XL; Pesadilla con arco Power LX.
+- **Wither Skeleton Emperador**: 1 de cada 50 wither skeletons del Nether. 40 corazones, estandarte y armadura de oro, arco con Power C y Punch V. Las flechas no le hacen dano. 50% de soltar una espada de netherite irrompible.
+- **Strider Jinete**: todo strider adulto lleva un Piglin Brute encima.
+- **Gigantes** en los Plains (1 de cada 500 zombies): 300 corazones, golpes que quitan muchisima vida y sueltan el **Arco de Gigante** (Power X).
 
 ## Logros
 
@@ -171,5 +191,5 @@ Salen en el menu de logros (tecla L), pestana **HM**.
 
 ## Comandos
 
-- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva), `evento` (OP: gira la tragamonedas de eventos).
+- `/hm` (alias `/permadeath`): `items`, `day`, `awake`, `mensaje`, `lives`, `resetlives`, `addlife`, `reducestorm`, `resetdifficulty`, `resethealth`, `netheriteArmor`, `finalmsg`, `beginning [tp]` (OP: donde esta el portal a The Beginning y si esta abierto; con `tp` te lleva), `evento` (OP: gira la tragamonedas de eventos), `infernal` (OP: herramientas de netherite irrompibles y armadura de Netherite Infernal completa).
 - `/hmreload` (alias `/hmr`), permiso `hmplugin.reload`.

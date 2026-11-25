@@ -33,6 +33,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             MessageUtils.send(player, "<yellow>/hm day <white>- Muestra el día actual");
             MessageUtils.send(player, "<yellow>/hm day <numero> <white>- Cambia el día <gray>(Solo OP)");
             MessageUtils.send(player, "<yellow>/hm items <white>- Entrega ítems especiales <gray>(Solo OP)");
+            MessageUtils.send(player,
+                    "<yellow>/hm infernal <white>- Herramientas de netherite y armadura de Netherite Infernal <gray>(Solo OP)");
             MessageUtils.send(player, "<yellow>/hm awake <white>- Muestra tiempo sin dormir y riesgo de Phantoms");
             MessageUtils.send(player,
                     "<yellow>/hm netheriteArmor <white>- Obtener armadura completa de Netherite <gray>(Día 25-29, Solo OP)");
@@ -91,6 +93,25 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("infernal")) {
+            if (!player.isOp()) {
+                MessageUtils.send(player, "<red>No tienes permisos.");
+                return true;
+            }
+            // Herramientas de netherite irrompibles (como las del cofre de The Beginning) y la Netherite Infernal
+            for (org.bukkit.Material tool : new org.bukkit.Material[] { org.bukkit.Material.NETHERITE_SWORD,
+                    org.bukkit.Material.NETHERITE_PICKAXE, org.bukkit.Material.NETHERITE_AXE,
+                    org.bukkit.Material.NETHERITE_SHOVEL, org.bukkit.Material.NETHERITE_HOE }) {
+                org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(tool);
+                item.editMeta(meta -> meta.setUnbreakable(true));
+                player.getInventory().addItem(item);
+            }
+            player.getInventory().addItem(HMItems.craftInfernalHelmet(), HMItems.craftInfernalChestplate(),
+                    HMItems.craftInfernalLeggings(), HMItems.craftInfernalBoots());
+            MessageUtils.send(player, "<green>Herramientas de netherite y armadura de Netherite Infernal entregadas.");
+            return true;
+        }
+
         if (args[0].equalsIgnoreCase("items")) {
             if (!player.isOp()) {
                 MessageUtils.send(player, "<red>No tienes permisos.");
@@ -99,8 +120,6 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
             player.getInventory().addItem(HMItems.createLifeOrb());
             player.getInventory().addItem(HMItems.createEndRelic());
-            player.getInventory().addItem(HMItems.craftInfernalHelmet());
-            player.getInventory().addItem(HMItems.craftInfernalChestplate());
             player.getInventory().addItem(HMItems.createInfernalNetherite().asQuantity(8));
 
             MessageUtils.send(player, "<green>¡Ítems entregados! Revisa tu inventario.");
@@ -526,7 +545,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             // Sugerir subcomandos principales
             List<String> subcommands = Arrays.asList("day", "items", "awake", "mensaje", "lives", "resetlives",
                     "addlife", "reducestorm", "resetdifficulty", "resethealth", "netheriteArmor", "finalmsg",
-                    "beginning", "evento");
+                    "beginning", "evento", "infernal");
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());

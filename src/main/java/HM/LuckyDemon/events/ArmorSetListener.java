@@ -108,49 +108,57 @@ public class ArmorSetListener implements Listener {
                 type.contains("LEGGINGS") || type.contains("BOOTS");
     }
 
+    /** Cualquier cambio de armadura (también dispensers, romperse o morir): se mira al tick siguiente. */
+    @EventHandler
+    public void onArmorChange(com.destroystokyo.paper.event.player.PlayerArmorChangeEvent e) {
+        Player player = e.getPlayer();
+        HMPlugin.getInstance().getServer().getScheduler().runTask(HMPlugin.getInstance(), () -> checkArmorSet(player));
+    }
+
+    /** Al morir se pierden los efectos (la Resistencia del set) y con KeepInventory la armadura no cambia. */
+    @EventHandler
+    public void onRespawn(org.bukkit.event.player.PlayerRespawnEvent e) {
+        Player player = e.getPlayer();
+        HMPlugin.getInstance().getServer().getScheduler().runTask(HMPlugin.getInstance(), () -> checkArmorSet(player));
+    }
+
     /**
-     * Verificar si el jugador tiene el set completo y aplicar/remover bonus
+     * Bonus del set completo (como el original): Armadura Infernal del día 25 +4 corazones; Netherite Infernal (la
+     * roja de cuero) +5 corazones y Resistencia I mientras la lleves puesta.
      */
     private void checkArmorSet(Player player) {
         if (!player.isOnline())
             return;
 
-        boolean hasFullSet = hasFullInfernalSet(player);
-        boolean hasBonus = hasHealthBonus(player);
-
-        if (hasFullSet && !hasBonus) {
-            // Aplicar bonus
-            applyHealthBonus(player);
-            player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f);
-        } else if (!hasFullSet && hasBonus) {
-            // Remover bonus
+        boolean infernalNetherite = hasFullSet(player, ArmorSetListener::isInfernalNetherite);
+        double bonus = infernalNetherite ? 10.0 : hasFullSet(player, this::isInfernalArmor) ? 8.0 : 0.0;
+        double current = currentHealthBonus(player);
+        if (bonus != current) {
             removeHealthBonus(player);
-            player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 0.8f);
+            if (bonus > 0) {
+                applyHealthBonus(player, bonus);
+            }
+            player.playSound(player.getLocation(), bonus > current ? org.bukkit.Sound.BLOCK_BEACON_ACTIVATE
+                    : org.bukkit.Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, bonus > current ? 1.5f : 0.8f);
+        }
+
+        org.bukkit.potion.PotionEffect resistance = player.getPotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE);
+        boolean ours = resistance != null && resistance.isInfinite() && resistance.getAmplifier() == 0;
+        if (infernalNetherite && resistance == null) {
+            player.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE,
+                    org.bukkit.potion.PotionEffect.INFINITE_DURATION, 0, true, false));
+        } else if (!infernalNetherite && ours) {
+            player.removePotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE);
         }
     }
 
-    /**
-     * Verificar si el jugador tiene el set completo
-     */
-    private boolean hasFullInfernalSet(Player player) {
+    private boolean hasFullSet(Player player, java.util.function.Predicate<ItemStack> piece) {
         EntityEquipment equipment = player.getEquipment();
-        if (equipment == null)
-            return false;
-
-        ItemStack helmet = equipment.getHelmet();
-        ItemStack chestplate = equipment.getChestplate();
-        ItemStack leggings = equipment.getLeggings();
-        ItemStack boots = equipment.getBoots();
-
-        return isInfernalArmor(helmet) &&
-                isInfernalArmor(chestplate) &&
-                isInfernalArmor(leggings) &&
-                isInfernalArmor(boots);
+        return piece.test(equipment.getHelmet()) && piece.test(equipment.getChestplate())
+                && piece.test(equipment.getLeggings()) && piece.test(equipment.getBoots());
     }
 
-    /**
-     * Verificar si un item es armadura infernal
-     */
+    /** Armadura Infernal del día 25 (netherite real). */
     private boolean isInfernalArmor(ItemStack item) {
         if (item == null || !item.hasItemMeta())
             return false;
@@ -159,46 +167,38 @@ public class ArmorSetListener implements Listener {
         return meta.getPersistentDataContainer().has(ARMOR_KEY, PersistentDataType.BYTE);
     }
 
-    /**
-     * Verificar si el jugador tiene el bonus de vida
-     */
-    private boolean hasHealthBonus(Player player) {
-        AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
-        if (maxHealth == null)
-            return false;
-
-        // Buscar por UUID fijo
-        for (AttributeModifier modifier : maxHealth.getModifiers()) {
-            if (modifier.getUniqueId().equals(MODIFIER_UUID)) {
-                return true;
-            }
-        }
-        return false;
+    /** Netherite Infernal: la de cuero rojo (HMItems.craftInfernal*, marca tier=infernal); no cuenta la elytra. */
+    private static boolean isInfernalNetherite(ItemStack item) {
+        return item != null && item.hasItemMeta() && item.getType().name().startsWith("LEATHER_")
+                && "infernal".equals(item.getItemMeta().getPersistentDataContainer()
+                        .get(TIER_KEY, PersistentDataType.STRING));
     }
 
-    /**
-     * Aplicar bonus de +4 corazones (8 puntos de vida)
-     */
-    private void applyHealthBonus(Player player) {
+    private static final NamespacedKey TIER_KEY = new NamespacedKey(HMPlugin.getInstance(), "tier");
+
+    /** Vida que da ahora el bonus del set (0 si no lo tiene). */
+    private double currentHealthBonus(Player player) {
+        AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
+        if (maxHealth == null)
+            return 0;
+        for (AttributeModifier modifier : maxHealth.getModifiers()) {
+            if (modifier.getUniqueId().equals(MODIFIER_UUID)) {
+                return modifier.getAmount();
+            }
+        }
+        return 0;
+    }
+
+    private void applyHealthBonus(Player player, double amount) {
         AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealth == null)
             return;
 
-        // Remover bonus anterior si existe
-        removeHealthBonus(player);
-
-        // Crear y aplicar nuevo modificador con UUID FIJO
-        AttributeModifier modifier = new AttributeModifier(
-                MODIFIER_UUID, // UUID FIJO
-                MODIFIER_NAME,
-                8.0, // +4 corazones = +8 puntos de vida
-                AttributeModifier.Operation.ADD_NUMBER);
-
-        maxHealth.addModifier(modifier);
+        maxHealth.addModifier(new AttributeModifier(MODIFIER_UUID, MODIFIER_NAME, amount,
+                AttributeModifier.Operation.ADD_NUMBER));
 
         // Curar al jugador para que vea el efecto inmediatamente
-        double newHealth = Math.min(player.getHealth() + 8.0, maxHealth.getValue());
-        player.setHealth(newHealth);
+        player.setHealth(Math.min(player.getHealth() + amount, maxHealth.getValue()));
     }
 
     /**

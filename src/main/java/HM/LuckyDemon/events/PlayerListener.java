@@ -113,6 +113,13 @@ public class PlayerListener implements Listener {
         // Verificar si se puede saltar la noche según el día
         if (!HMPlugin.getInstance().getDifficultyManager().canSkipNight()) {
             e.setCancelled(true);
+            // DÍA 50: solo un 10% de reiniciar el contador de phantoms (antes, siempre)
+            if (GameManager.getInstance().getDay() >= 50 && random.nextInt(100) >= 10) {
+                MessageUtils.send(e.getPlayer(),
+                        "<red>☠ La noche no se puede saltar... <gray>(Y no logras relajarte: <red>los Phantoms siguen<gray>)");
+                e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.8f);
+                return;
+            }
             // Resetear el contador de phantoms aunque no se pueda dormir
             e.getPlayer().setStatistic(org.bukkit.Statistic.TIME_SINCE_REST, 0);
             MessageUtils.send(e.getPlayer(),

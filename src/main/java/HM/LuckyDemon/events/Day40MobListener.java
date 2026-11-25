@@ -133,7 +133,14 @@ public class Day40MobListener implements Listener {
         }
         // Ultra Ravager, Carlos y Jess (DifficultyManager.spawnUltraRavager)
         String boss = e.getEntity().getPersistentDataContainer().get(bossKey, PersistentDataType.STRING);
-        if (boss != null) {
+        // DÍA 50: cada drop al 33% y el Ultra Ravager fuera del Nether no suelta nada (como el original)
+        boolean day50 = GameManager.getInstance().getDay() >= 50;
+        if (boss != null && day50 && boss.equals("ultra_ravager")
+                && e.getEntity().getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
+            e.getDrops().clear();
+            return;
+        }
+        if (boss != null && (!day50 || random.nextInt(100) < 33)) {
             e.getDrops().add(switch (boss) {
                 case "ultra_ravager" -> new ItemStack(Material.TOTEM_OF_UNDYING);
                 case "carlos" -> new ItemStack(Material.GOLD_INGOT, 32);
