@@ -978,14 +978,17 @@ public class PlayerListener implements Listener {
         String gapType = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 
         if ("hyper".equals(gapType)) {
-            // Solo se puede comer 1 vez en toda la partida
-            if (p.getPersistentDataContainer().has(hyperEatenKey(), PersistentDataType.BYTE)) {
+            // 1 vez en toda la partida; desde el día 60, una segunda (la marca guarda cuántas comió)
+            int eaten = hyperEaten(p);
+            int max = GameManager.getInstance().getDay() >= 60 ? 2 : 1;
+            if (eaten >= max) {
                 e.setCancelled(true);
-                p.sendMessage(MessageUtils.format("<red>Ya comiste una Hyper Golden Apple +, solo se puede comer 1 vez."));
+                p.sendMessage(MessageUtils.format("<red>Ya comiste " + eaten
+                        + " Hyper Golden Apple +, no puedes comer más."));
                 return;
             }
 
-            p.getPersistentDataContainer().set(hyperEatenKey(), PersistentDataType.BYTE, (byte) 1);
+            p.getPersistentDataContainer().set(hyperEatenKey(), PersistentDataType.BYTE, (byte) (eaten + 1));
             updateHealth(p);
             p.sendMessage(MessageUtils.format("<green>¡Has ganado 2 contenedores de vida permanentes!"));
 
@@ -1000,14 +1003,21 @@ public class PlayerListener implements Listener {
 
     private static final UUID DAY40_HEALTH_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000001");
     private static final UUID HYPER_APPLE_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000002");
+    private static final UUID HYPER_APPLE_2_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000003");
+    private static final UUID DAY60_HEALTH_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000004");
+
+    private static int hyperEaten(Player p) {
+        Byte n = p.getPersistentDataContainer().get(hyperEatenKey(), PersistentDataType.BYTE);
+        return n == null ? 0 : n;
+    }
 
     private static NamespacedKey hyperEatenKey() {
         return new NamespacedKey(HMPlugin.getInstance(), "hyper_apple_eaten");
     }
 
     /**
-     * Unico lugar que calcula la vida maxima: base 20, -4 corazones desde el dia 40
-     * y +2 si ya comio la Hyper Golden Apple. Se puede llamar las veces que sea.
+     * Unico lugar que calcula la vida maxima: base 20, -4 corazones desde el dia 40, -4 mas desde el 60
+     * y +2 por cada Hyper Golden Apple comida (max 2). Se puede llamar las veces que sea.
      */
     public static void updateHealth(Player p) {
         AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
@@ -1018,8 +1028,10 @@ public class PlayerListener implements Listener {
         }
         setHealthModifier(attribute, DAY40_HEALTH_UUID, "hmplugin.day40.health_reduction", -8.0,
                 GameManager.getInstance().getDay() >= 40);
-        setHealthModifier(attribute, HYPER_APPLE_UUID, "hmplugin.hyper_apple", 4.0,
-                p.getPersistentDataContainer().has(hyperEatenKey(), PersistentDataType.BYTE));
+        setHealthModifier(attribute, DAY60_HEALTH_UUID, "hmplugin.day60.health_reduction", -8.0,
+                GameManager.getInstance().getDay() >= 60);
+        setHealthModifier(attribute, HYPER_APPLE_UUID, "hmplugin.hyper_apple", 4.0, hyperEaten(p) >= 1);
+        setHealthModifier(attribute, HYPER_APPLE_2_UUID, "hmplugin.hyper_apple_2", 4.0, hyperEaten(p) >= 2);
         if (!p.isDead() && p.getHealth() > attribute.getValue()) {
             p.setHealth(attribute.getValue());
         }

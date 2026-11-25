@@ -414,7 +414,9 @@ public class BeginningManager implements Listener {
             }
         }
         List<Integer> free = new ArrayList<>();
-        for (int i = 0; i < inv.getSize() && inv.isEmpty(); i++) free.add(i);
+        // DÍA 60: ya no hay loot (sin huecos libres no se tira nada)
+        for (int i = 0; i < inv.getSize() && inv.isEmpty()
+                && HM.LuckyDemon.managers.GameManager.getInstance().getDay() < 60; i++) free.add(i);
         java.util.Collections.shuffle(free, random);
         Set<Loot> rolled = new HashSet<>();
         // Se sigue tirando hasta tener al menos MIN_LOOT objetos distintos (salian cofres con solo manzanas)

@@ -161,6 +161,37 @@ public class DifficultyManager {
                         }
                     }
 
+                    // DÍA 60: cada 60 min jugados en supervivencia sale un Wither 5 bloques encima (como el original,
+                    // tiempo guardado por jugador). Arranca como uno invocado: carga y explota al salir
+                    if (currentDay >= 60 && player.getGameMode() == org.bukkit.GameMode.SURVIVAL) {
+                        org.bukkit.NamespacedKey witherKey = new org.bukkit.NamespacedKey(plugin, "wither_timer");
+                        int secs = player.getPersistentDataContainer().getOrDefault(witherKey,
+                                org.bukkit.persistence.PersistentDataType.INTEGER, 0) + 2;
+                        if (secs >= 60 * 60) {
+                            secs = 0;
+                            ((org.bukkit.entity.Wither) w.spawnEntity(player.getLocation().add(0, 5, 0),
+                                    EntityType.WITHER)).enterInvulnerabilityPhase();
+                        }
+                        player.getPersistentDataContainer().set(witherKey,
+                                org.bukkit.persistence.PersistentDataType.INTEGER, secs);
+                    }
+
+                    // DÍA 60: creepers en cualquier bloque y con cualquier luz (como el original: 1/30 por segundo
+                    // por jugador, un Ender Quantum Creeper a 15-30 bloques a su altura, si hay menos de 10 cerca)
+                    if (currentDay >= 60 && random.nextInt(15) == 0
+                            && player.getLocation().getNearbyEntitiesByType(Creeper.class, 30).size() < 10) {
+                        org.bukkit.block.Block ground = player.getLocation().add(
+                                (random.nextBoolean() ? 1 : -1) * (15 + random.nextInt(16)), -1,
+                                (random.nextBoolean() ? 1 : -1) * (15 + random.nextInt(16))).getBlock();
+                        if (ground.getType().isSolid() && ground.getRelative(0, 1, 0).isPassable()
+                                && ground.getRelative(0, 2, 0).isPassable()) {
+                            Creeper creeper = (Creeper) w.spawnEntity(ground.getLocation().add(0.5, 1, 0.5),
+                                    EntityType.CREEPER);
+                            applyMobEffects(creeper);
+                            makeEnderQuantumCreeper(creeper);
+                        }
+                    }
+
                     // DÍA 40: Ravagers de Granja que ya tuvieron un jugador a 96 bloques vuelven a despawnear lejos
                     if (currentDay >= 40) {
                         org.bukkit.NamespacedKey farmKey = new org.bukkit.NamespacedKey(plugin, "farm_ravager");
@@ -259,6 +290,34 @@ public class DifficultyManager {
         if (currentDay >= 50) {
             applyDay50Effects(entity);
         }
+        if (currentDay >= 60) {
+            applyDay60Effects(entity);
+        }
+    }
+
+    /** DÍA 60: golems de hierro Fuerza IV, Velocidad IV, Resistencia IV y Resistencia al fuego; creepers con la
+     * mecha a la mitad (vanilla 30 ticks, valor fijo para no acortarla otra vez si se aplica dos veces). */
+    private void applyDay60Effects(LivingEntity entity) {
+        int forever = PotionEffect.INFINITE_DURATION;
+        if (entity.getType() == EntityType.IRON_GOLEM) {
+            for (PotionEffectType type : new PotionEffectType[] { PotionEffectType.STRENGTH, PotionEffectType.SPEED,
+                    PotionEffectType.RESISTANCE }) {
+                entity.removePotionEffect(type); // los de días anteriores son más bajos
+                entity.addPotionEffect(new PotionEffect(type, forever, 3));
+            }
+            entity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, forever, 0));
+        } else if (entity instanceof Creeper creeper) {
+            creeper.setMaxFuseTicks(15);
+        }
+    }
+
+    /** DÍA 60: Ender Quantum Creeper (Ender Creeper invisible con la explosión del Quantum), como el original. */
+    private void makeEnderQuantumCreeper(Creeper creeper) {
+        applyEnderCreeperEffects(creeper);
+        creeper.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "quantum_creeper"),
+                org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        creeper.setExplosionRadius(7);
+        setSpecialName(creeper, "Ender Quantum Creeper", net.kyori.adventure.text.format.NamedTextColor.DARK_PURPLE);
     }
 
     private void applyDay50Effects(LivingEntity entity) {
@@ -323,7 +382,7 @@ public class DifficultyManager {
                 }
             }
             case WITHER_SKELETON -> {
-                if (entity.getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER && random.nextInt(50) == 0) {
+                if (entity.getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER && random.nextInt(50) < (currentDay >= 60 ? 4 : 1)) { // DÍA 60: x4
                     makeWitherEmperor(entity);
                 }
             }
@@ -613,10 +672,22 @@ public class DifficultyManager {
                         return true;
                     }
                 }
+                case VINDICATOR -> {
+                    // DÍA 60: 50% -> Evoker Acorazado. No los Vindicator Furioso de zombies (salen por replaceMob,
+                    // con spawn CUSTOM)
+                    if (currentDay >= 60 && entity.getEntitySpawnReason() != org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CUSTOM
+                            && random.nextBoolean()) {
+                        LivingEntity evoker = replaceMob(entity, EntityType.EVOKER);
+                        evoker.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE,
+                                PotionEffect.INFINITE_DURATION, 2));
+                        setSpecialName(evoker, "Evoker Acorazado", net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY);
+                        return true;
+                    }
+                }
                 case ZOMBIE -> {
                     org.bukkit.block.Biome biome = entity.getLocation().getBlock().getBiome();
                     if ((biome == org.bukkit.block.Biome.PLAINS || biome == org.bukkit.block.Biome.SUNFLOWER_PLAINS)
-                            && random.nextInt(500) == 0) {
+                            && random.nextInt(currentDay >= 60 ? 125 : 500) == 0) { // DÍA 60: x4
                         makeGiant((LivingEntity) entity.getWorld().spawnEntity(entity.getLocation(), EntityType.GIANT));
                         entity.remove();
                         return true;

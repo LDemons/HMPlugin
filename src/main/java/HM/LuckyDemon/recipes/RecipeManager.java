@@ -51,12 +51,12 @@ public class RecipeManager {
                 registerShaped("infernal_boots", HMItems.craftInfernalBoots(),
                                 " I ", "IAI", " I ", 'I', block, 'A', Material.NETHERITE_BOOTS);
 
-                // Elytras Infernales (Receta original: Diamantes rodeando Elytras)
+                // Elytras de Netherite Infernal (día 60, Day40CraftListener): elytra rodeada de 8 bloques
                 registerShaped("infernal_elytra", HMItems.craftInfernalElytra(),
-                                "DDD",
-                                "DED",
-                                "DDD",
-                                'D', Material.DIAMOND,
+                                "III",
+                                "IEI",
+                                "III",
+                                'I', block,
                                 'E', Material.ELYTRA);
         }
 

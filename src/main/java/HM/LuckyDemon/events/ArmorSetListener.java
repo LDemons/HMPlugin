@@ -167,9 +167,11 @@ public class ArmorSetListener implements Listener {
         return meta.getPersistentDataContainer().has(ARMOR_KEY, PersistentDataType.BYTE);
     }
 
-    /** Netherite Infernal: la de cuero rojo (HMItems.craftInfernal*, marca tier=infernal); no cuenta la elytra. */
+    /** Netherite Infernal: la de cuero rojo (HMItems.craftInfernal*, marca tier=infernal); las Elytras de Netherite
+     * Infernal cuentan como pechera (como el original). */
     private static boolean isInfernalNetherite(ItemStack item) {
-        return item != null && item.hasItemMeta() && item.getType().name().startsWith("LEATHER_")
+        return item != null && item.hasItemMeta()
+                && (item.getType().name().startsWith("LEATHER_") || item.getType() == org.bukkit.Material.ELYTRA)
                 && "infernal".equals(item.getItemMeta().getPersistentDataContainer()
                         .get(TIER_KEY, PersistentDataType.STRING));
     }

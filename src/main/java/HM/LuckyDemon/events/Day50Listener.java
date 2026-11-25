@@ -144,7 +144,8 @@ public class Day50Listener implements Listener {
         int current = p.getRemainingAir();
         int lost = current - e.getAmount();
         if (lost > 0 && e.getAmount() > 0) {
-            e.setAmount(Math.max(0, current - lost * 5));
+            // DÍA 60: 10 veces más rápido
+            e.setAmount(Math.max(0, current - lost * (GameManager.getInstance().getDay() >= 60 ? 10 : 5)));
         }
     }
 
@@ -196,7 +197,10 @@ public class Day50Listener implements Listener {
         Player p = e.getPlayer();
         int forever = PotionEffect.INFINITE_DURATION;
         List<PotionEffect> effects = switch (e.getItem().getType()) {
-            case PUMPKIN_PIE -> List.of(new PotionEffect(PotionEffectType.SATURATION, 20 * 5, 0));
+            // DÍA 60: pasa a ser la peor comida (Daño instantáneo IV)
+            case PUMPKIN_PIE -> List.of(GameManager.getInstance().getDay() >= 60
+                    ? new PotionEffect(PotionEffectType.INSTANT_DAMAGE, 1, 3)
+                    : new PotionEffect(PotionEffectType.SATURATION, 20 * 5, 0));
             case SPIDER_EYE, POISONOUS_POTATO -> List.of(new PotionEffect(PotionEffectType.POISON, forever, 0));
             case ROTTEN_FLESH -> List.of(new PotionEffect(PotionEffectType.HUNGER, forever, 1));
             case PUFFERFISH -> List.of(new PotionEffect(PotionEffectType.POISON, forever, 3),
@@ -269,6 +273,7 @@ public class Day50Listener implements Listener {
     @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
     public void onEmperorDeath(EntityDeathEvent e) {
         if (e.getEntity().getPersistentDataContainer().has(key("wither_emperor"))
+                && GameManager.getInstance().getDay() < 60 // DÍA 60: sin drops
                 && java.util.concurrent.ThreadLocalRandom.current().nextBoolean()) {
             // Irrompible, como las herramientas de netherite de The Beginning y la Espada de Netherite del original
             ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
@@ -280,7 +285,8 @@ public class Day50Listener implements Listener {
     /** Gigante: suelta el Arco de Gigante (Poder X). */
     @EventHandler
     public void onGiantDeath(EntityDeathEvent e) {
-        if (e.getEntity().getPersistentDataContainer().has(key("hm_giant"))) {
+        if (e.getEntity().getPersistentDataContainer().has(key("hm_giant"))
+                && GameManager.getInstance().getDay() < 60) { // DÍA 60: sin drops
             ItemStack bow = new ItemStack(Material.BOW);
             bow.editMeta(meta -> meta.displayName(net.kyori.adventure.text.Component.text("Arco de Gigante",
                     net.kyori.adventure.text.format.NamedTextColor.AQUA)

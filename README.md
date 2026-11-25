@@ -177,6 +177,22 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - **Strider Jinete**: todo strider adulto lleva un Piglin Brute encima.
 - **Gigantes** en los Plains (1 de cada 500 zombies): 300 corazones, golpes que quitan muchisima vida y sueltan el **Arco de Gigante** (Power X).
 
+## Dia 60
+- Los totems gastan 3 y tienen 7% de probabilidad de fallar.
+- Ya no se pueden conseguir totems de ninguna forma (ni mobs, ni cofres, ni The Beginning).
+- Los cofres de The Beginning ya no traen loot.
+- Se pueden craftear las **Elytras de Netherite Infernal**: elytra rodeada de 8 Bloques de Netherite Infernal (conserva sus encantamientos). Cuentan como pechera para el bonus del set de Netherite Infernal.
+- Cada 60 minutos jugados en supervivencia te sale un **Wither** encima.
+- Los Iron Golems tienen Fuerza IV, Velocidad IV, Resistencia IV y Resistencia al Fuego.
+- Salen **Ender Quantum Creepers** a tu alrededor en cualquier bloque y con cualquier luz.
+- Los creepers explotan el doble de rapido.
+- Se puede comer una segunda Hyper Golden Apple + (otros +2 corazones).
+- La tarta de calabaza es la peor comida del juego: da Dano Instantaneo IV.
+- El 50% de los Vindicators (no los que salen de zombies) son **Evokers Acorazados** con Resistencia III.
+- Gigantes y Wither Skeleton Emperadores son 4 veces mas comunes, pero no sueltan nada.
+- Te ahogas 10 veces mas rapido.
+- Todos pierden otros 4 corazones de vida maxima (8 menos en total).
+
 ## Logros
 
 Salen en el menu de logros (tecla L), pestana **HM**.

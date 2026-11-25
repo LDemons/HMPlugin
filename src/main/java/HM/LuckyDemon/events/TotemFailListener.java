@@ -51,13 +51,18 @@ public class TotemFailListener implements Listener {
             return;
         }
 
-        // DÍA 40+: Consumir 2 tótems en vez de 1
-        if (currentDay >= 40 && !removeSecondTotem(inv, hand)) {
-            MessageUtils.send(player, "<gray>Solo tenías <yellow>1 tótem <gray>(Se requieren 2 en día 40+)");
+        // DÍA 40+: se gastan 2 tótems, DÍA 60+: 3
+        int needed = currentDay >= 60 ? 3 : currentDay >= 40 ? 2 : 1;
+        for (int i = 1; i < needed; i++) {
+            if (!removeSecondTotem(inv, hand)) {
+                MessageUtils.send(player, "<gray>Solo tenías <yellow>" + i + " tótem(s) <gray>(Se requieren " + needed
+                        + " en día " + (currentDay >= 60 ? 60 : 40) + "+)");
+                break;
+            }
         }
 
-        // Calcular probabilidad de fallo
-        int failChance = currentDay >= 50 ? 5 : currentDay >= 40 ? 3 : 1; // 5% día 50+, 3% día 40+, 1% día 30-39
+        // Calcular probabilidad de fallo: 7% día 60+, 5% día 50+, 3% día 40+, 1% día 30-39
+        int failChance = currentDay >= 60 ? 7 : currentDay >= 50 ? 5 : currentDay >= 40 ? 3 : 1;
         int roll = random.nextInt(100) + 1; // 1-100
         boolean failed = roll <= failChance;
 
@@ -68,7 +73,7 @@ public class TotemFailListener implements Listener {
             inv.setItem(hand, null);
 
             // Determinar cantidad de tótems consumidos
-            String totemCount = currentDay >= 40 ? "2 tótems" : "un tótem";
+            String totemCount = needed > 1 ? needed + " tótems" : "un tótem";
 
             // Mensaje de fallo en broadcast
             Bukkit.broadcast(MessageUtils.format(
@@ -87,12 +92,30 @@ public class TotemFailListener implements Listener {
                     .info("Tótem de " + player.getName() + " ha fallado (roll: " + roll + "/" + failChance + "%)");
         } else {
             // Tótem funcionó correctamente
-            String totemCount = currentDay >= 40 ? "2 tótems" : "un tótem";
+            String totemCount = needed > 1 ? needed + " tótems" : "un tótem";
 
             Bukkit.broadcast(MessageUtils.format(
                     "<gray>El jugador <white>" + player.getName()
                             + "<gray> ha consumido " + totemCount + " <green>(Probabilidad: <bold>" + roll
                             + " <gray>[> <green>" + failChance + "<gray>])"));
+        }
+    }
+
+    /**
+     * DÍA 60: ya no se consiguen tótems de ninguna forma. Se borran de los drops de mobs (no de jugadores: serían
+     * sus propios tótems) y del loot de cofres. MONITOR para ir después de todos los que los agregan.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onTotemDrop(org.bukkit.event.entity.EntityDeathEvent e) {
+        if (GameManager.getInstance().getDay() >= 60 && !(e.getEntity() instanceof Player)) {
+            e.getDrops().removeIf(item -> item.getType() == Material.TOTEM_OF_UNDYING);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onTotemLoot(org.bukkit.event.world.LootGenerateEvent e) {
+        if (GameManager.getInstance().getDay() >= 60) {
+            e.getLoot().removeIf(item -> item != null && item.getType() == Material.TOTEM_OF_UNDYING);
         }
     }
 
