@@ -253,6 +253,24 @@ public class PlayerListener implements Listener {
             return;
         }
 
+        // DÍA 60: ya no salen pigmans en el Nether
+        if (currentDay >= 60 && e.getEntityType() == EntityType.ZOMBIFIED_PIGLIN
+                && e.getLocation().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
+            e.setCancelled(true);
+            return;
+        }
+
+        // DÍA 60: Snow Golems hostiles, el 20% de los monstruos naturales de biomas nevados del Overworld
+        if (currentDay >= 60 && e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL
+                && e.getEntity() instanceof org.bukkit.entity.Enemy
+                && e.getLocation().getWorld().getEnvironment() == org.bukkit.World.Environment.NORMAL
+                && e.getLocation().getBlock().getTemperature() < 0.15
+                && java.util.concurrent.ThreadLocalRandom.current().nextInt(5) == 0) {
+            e.setCancelled(true);
+            HMPlugin.getInstance().getDifficultyManager().makeHostileSnowGolem(e.getLocation());
+            return;
+        }
+
         // DÍA 30+: murciélago -> Blaze Infernal, calamar -> Guardián Acuático. El original no llega a existir, así que
         // su tope (ambiente / agua) nunca se llena y el juego sigue intentando: con 4 cerca ya no sale nada más
         if (currentDay >= 30 && (e.getEntity() instanceof Bat || e.getEntity() instanceof Squid)) {
@@ -270,7 +288,9 @@ public class PlayerListener implements Listener {
                     blaze.setCustomNameVisible(false);
                 }
             } else if (loc.getNearbyEntitiesByType(Guardian.class, TRANSFORM_RADIUS).size() < MAX_TRANSFORMED) {
-                Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc, EntityType.GUARDIAN);
+                // DÍA 60: los guardianes son Elder Guardians
+                Guardian guardian = (Guardian) loc.getWorld().spawnEntity(loc,
+                        currentDay >= 60 ? EntityType.ELDER_GUARDIAN : EntityType.GUARDIAN);
                 guardian.getPersistentDataContainer().set(transformedKey, PersistentDataType.BYTE, (byte) 1);
                 guardian.getPersistentDataContainer().set(skipKey, PersistentDataType.BYTE, (byte) 1);
                 // Día 40: Speed III y Resistencia II
@@ -1005,6 +1025,7 @@ public class PlayerListener implements Listener {
     private static final UUID HYPER_APPLE_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000002");
     private static final UUID HYPER_APPLE_2_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000003");
     private static final UUID DAY60_HEALTH_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000004");
+    private static final UUID LIFE_ORB_UUID = UUID.fromString("d40a0000-0000-0000-0000-000000000005");
 
     private static int hyperEaten(Player p) {
         Byte n = p.getPersistentDataContainer().get(hyperEatenKey(), PersistentDataType.BYTE);
@@ -1016,8 +1037,8 @@ public class PlayerListener implements Listener {
     }
 
     /**
-     * Unico lugar que calcula la vida maxima: base 20, -4 corazones desde el dia 40, -4 mas desde el 60
-     * y +2 por cada Hyper Golden Apple comida (max 2). Se puede llamar las veces que sea.
+     * Unico lugar que calcula la vida maxima: base 20, -4 corazones desde el dia 40, -4 mas desde el 60, -8 desde
+     * el 61 sin el Orbe de Vida encima y +2 por cada Hyper Golden Apple comida (max 2). Se puede llamar las veces que sea.
      */
     public static void updateHealth(Player p) {
         AttributeInstance attribute = p.getAttribute(Attribute.MAX_HEALTH);
@@ -1030,6 +1051,8 @@ public class PlayerListener implements Listener {
                 GameManager.getInstance().getDay() >= 40);
         setHealthModifier(attribute, DAY60_HEALTH_UUID, "hmplugin.day60.health_reduction", -8.0,
                 GameManager.getInstance().getDay() >= 60);
+        // Después del contador del Orbe de Vida (día 61+), sin el Orbe encima: -8 corazones (como el original)
+        setHealthModifier(attribute, LIFE_ORB_UUID, "hmplugin.life_orb", -16.0, Day60Listener.lifeOrbPenalty(p));
         setHealthModifier(attribute, HYPER_APPLE_UUID, "hmplugin.hyper_apple", 4.0, hyperEaten(p) >= 1);
         setHealthModifier(attribute, HYPER_APPLE_2_UUID, "hmplugin.hyper_apple_2", 4.0, hyperEaten(p) >= 2);
         if (!p.isDead() && p.getHealth() > attribute.getValue()) {

@@ -193,6 +193,22 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Te ahogas 10 veces mas rapido.
 - Todos pierden otros 4 corazones de vida maxima (8 menos en total).
 
+- **Orbe de Vida**: el dia 60, de 16:00 a 00:00, una barra muestra el tiempo que queda para craftearlo (64 de cada material y un corazon del mar; solo se puede durante el contador). Desde el dia 61, quien no lo lleve encima pierde 8 corazones (queda casi sin vida).
+- Se bloquean casi todos los slots del inventario (quedan libres 6 de la barra y 1 del inventario). La **Reliquia del Comienzo** los libera todos: Reliquia del Fin al centro, 4 shulker shells en las esquinas y 32 bloques de diamante en cada lado (se gastan los 32). Con solo la Reliquia del Fin se liberan los mismos de antes, salvo la mano izquierda.
+- Los mobs ya no tienen Resistencia al Fuego, pero sus armas queman: Fire Aspect II en las de cuerpo a cuerpo y Flame en arcos y ballestas.
+- Las perlas de ender tardan el doble en recargar.
+- Todos los creepers son **Ender Quantum Creepers**: electricos, invisibles y con una explosion enorme.
+- Romper un bloque quita 8 corazones (no con herramientas de netherite).
+- **Snow Golems Hostiles**: el 20% de los mobs hostiles de los biomas nevados.
+- Los Vex tienen Fuerza III y 7 de dano; los Endermans, Fuerza X.
+- Los Guardianes son Elder Guardians (como mucho 5 juntos).
+- Los Drowned hacen el triple de dano.
+- El 25% de los Phantoms salen como 4 Ender Ghasts.
+- Ya no salen pigmans en el Nether (tampoco la lluvia de pigmans).
+- Los Vindicators tienen 5 efectos al azar, como las aranas de cueva.
+- Los aldeanos son Vindicators, tambien los que ya existian.
+- La arena de almas da Slowness III por 30 s.
+- **Ultra Esqueletos**: Guerrero (diamante Proteccion V, arco Power L, 50 corazones), Infernal (hacha Fire Aspect XX y Filo C, 50 corazones), Asesino (ballesta Filo C, Speed IV, 30 corazones), Tactico (arco Punch L y Power CX, 30 corazones), Pesadilla (arco Power CL, 30 corazones), **Demoniaco** (cuero azul, sus flechas explotan, 50 corazones), **Cientifico** (cuero verde, flechas de Lentitud III, Debilidad, Glowing y Veneno III 3 min, 50 corazones) y, 1 de cada 100, **Definitivo** (arco Power 255, Speed II, 200 corazones, no despawnea).
 ## Logros
 
 Salen en el menu de logros (tecla L), pestana **HM**.

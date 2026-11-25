@@ -37,17 +37,15 @@ import java.util.Set;
  */
 public class Day40InventoryListener implements Listener {
 
-    // Slots bloqueados (columna vertical como se ve en la imagen):
-    // - Slot 40 = Offhand/Escudo
-    // - Slot 13 = Quinta columna, primera fila del inventario
-    // - Slot 22 = Quinta columna, segunda fila del inventario
-    // - Slot 31 = Quinta columna, tercera fila del inventario
-    // - Slot 4 = Quinta columna de la hotbar
-    private static final Set<Integer> LOCKED_SLOTS = new HashSet<>(Arrays.asList(4, 13, 22, 31));
+    // DÍA 40: la columna del centro (4, 13, 22, 31) y la mano izquierda (40). Los libera la Reliquia del Fin.
+    // DÍA 60 (como el original): la mano izquierda pasa a los de la Reliquia del Comienzo, que bloquea casi todo el
+    // inventario (quedan libres 0-3, 5, 6 y 35). La Reliquia del Comienzo libera todos.
+    private static final Set<Integer> END_RELIC_SLOTS = Set.of(4, 13, 22, 31);
+    private static final Set<Integer> BEGINNING_RELIC_SLOTS = Set.of(40, 34, 33, 32, 30, 29, 28, 27, 26, 25, 24,
+            23, 21, 20, 19, 18, 17, 16, 15, 14, 12, 11, 10, 9, 8, 7);
     private static final int OFFHAND_SLOT = 40;
 
     private static NamespacedKey LOCKED_SLOT_KEY;
-    private static NamespacedKey END_RELIC_KEY;
 
     private static NamespacedKey getLockedSlotKey() {
         if (LOCKED_SLOT_KEY == null) {
@@ -56,158 +54,96 @@ public class Day40InventoryListener implements Listener {
         return LOCKED_SLOT_KEY;
     }
 
-    private static NamespacedKey getEndRelicKey() {
-        if (END_RELIC_KEY == null) {
-            END_RELIC_KEY = new NamespacedKey(HMPlugin.getInstance(), "permadeath_item");
+    /** Slots que tiene bloqueados ahora el jugador según el día y las reliquias que lleva. */
+    public static Set<Integer> lockedSlots(Player player) {
+        int day = GameManager.getInstance().getDay();
+        Set<Integer> locked = new HashSet<>();
+        if (day < 40 || HM.LuckyDemon.items.HMItems.carries(player, "beginning_relic")) {
+            return locked;
         }
-        return END_RELIC_KEY;
+        if (!hasEndRelic(player)) {
+            locked.addAll(END_RELIC_SLOTS);
+            locked.add(OFFHAND_SLOT);
+        }
+        if (day >= 60) {
+            locked.addAll(BEGINNING_RELIC_SLOTS);
+        }
+        return locked;
     }
 
-    /**
-     * Verificar si el jugador tiene la Reliquia del Fin en su inventario
-     */
     public static boolean hasEndRelic(Player player) {
-        PlayerInventory inv = player.getInventory();
+        return HM.LuckyDemon.items.HMItems.carries(player, "end_relic");
+    }
 
-        // Revisar todo el inventario incluyendo armadura y offhand
-        for (ItemStack item : inv.getContents()) {
-            if (isEndRelic(item)) {
-                return true;
-            }
-        }
-
-        // Revisar offhand específicamente
-        if (isEndRelic(inv.getItemInOffHand())) {
-            return true;
-        }
-
-        // Revisar armadura
-        for (ItemStack item : inv.getArmorContents()) {
-            if (isEndRelic(item)) {
-                return true;
-            }
-        }
-
-        return false;
+    private static boolean isRelic(ItemStack item) {
+        return HM.LuckyDemon.items.HMItems.isItem(item, "end_relic")
+                || HM.LuckyDemon.items.HMItems.isItem(item, "beginning_relic");
     }
 
     /**
-     * Verificar si un item es la Reliquia del Fin
-     */
-    private static boolean isEndRelic(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) {
-            return false;
-        }
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return false;
-        }
-        String value = meta.getPersistentDataContainer().get(getEndRelicKey(), PersistentDataType.STRING);
-        return "end_relic".equals(value);
-    }
-
-    /**
-     * Al unirse el jugador, colocar los bloqueadores si es día 40+ y NO tiene
-     * reliquia
+     * Al unirse el jugador, colocar los bloqueadores si es día 40+
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent e) {
         Player player = e.getPlayer();
-
-        // Verificar si es día 40+
         if (GameManager.getInstance().getDay() >= 40) {
             // Delay para asegurar que el inventario esté cargado
-            Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
-                updateLockedSlots(player);
-            }, 20L);
+            Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> updateLockedSlots(player), 20L);
         }
         // La vida maxima del dia 40 la calcula PlayerListener.updateHealth al entrar
     }
 
     /**
-     * Si la Reliquia sale del inventario (a un cofre, etc.) vuelven los bloqueos;
+     * Si una Reliquia sale del inventario (a un cofre, etc.) vuelven los bloqueos;
      * si entra, se liberan.
      */
     @EventHandler
     public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        // Al tick siguiente: el juego devuelve al inventario lo del cursor y la cuadrícula de crafteo DESPUÉS de
+        // este evento. Antes se bloqueaba con la reliquia en el cursor y, sin huecos, el juego la tiraba al suelo
         if (e.getPlayer() instanceof Player player) {
-            updateLockedSlots(player);
+            Bukkit.getScheduler().runTask(HMPlugin.getInstance(), () -> updateLockedSlots(player));
         }
     }
 
     @EventHandler
     public void onPickupRelic(org.bukkit.event.entity.EntityPickupItemEvent e) {
-        if (e.getEntity() instanceof Player player && isEndRelic(e.getItem().getItemStack())) {
+        if (e.getEntity() instanceof Player player && isRelic(e.getItem().getItemStack())) {
             Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> updateLockedSlots(player), 1L);
         }
     }
 
     /**
-     * Actualizar los slots bloqueados según si tiene o no la reliquia
+     * Pone los bloqueadores en los slots bloqueados y los quita de los que ya no lo están.
      */
     public static void updateLockedSlots(Player player) {
         if (GameManager.getInstance().getDay() < 40) {
             return;
         }
-
-        if (hasEndRelic(player)) {
-            // Tiene la reliquia - remover bloqueadores si los tiene
-            removeLockedSlotsFromPlayer(player);
-        } else {
-            // No tiene la reliquia - aplicar bloqueadores
-            applyLockedSlots(player);
-        }
-    }
-
-    /**
-     * Remover los slots bloqueados de un jugador específico
-     */
-    private static void removeLockedSlotsFromPlayer(Player player) {
+        Set<Integer> locked = lockedSlots(player);
         PlayerInventory inv = player.getInventory();
-
-        // Remover de slots normales
-        for (int slot : LOCKED_SLOTS) {
-            ItemStack item = inv.getItem(slot);
-            if (isLockedSlotItem(item)) {
+        for (int slot = 0; slot <= OFFHAND_SLOT; slot++) {
+            if (locked.contains(slot)) {
+                applyLockToSlot(player, inv, slot, locked);
+            } else if (isLockedSlotItem(inv.getItem(slot))) {
                 inv.setItem(slot, null);
             }
         }
-
-        // Remover del offhand
-        if (isLockedSlotItem(inv.getItemInOffHand())) {
-            inv.setItemInOffHand(null);
-        }
-
         player.updateInventory();
     }
 
-    /**
-     * Aplicar los slots bloqueados al inventario del jugador
-     */
-    public static void applyLockedSlots(Player player) {
-        if (GameManager.getInstance().getDay() < 40) {
-            return;
-        }
-
-        // Si tiene la reliquia, no bloquear
-        if (hasEndRelic(player)) {
-            return;
-        }
-
+    /** Quita todos los bloqueadores. */
+    private static void removeLockedSlotsFromPlayer(Player player) {
         PlayerInventory inv = player.getInventory();
-
-        // Bloquear slots normales del inventario
-        for (int slot : LOCKED_SLOTS) {
-            applyLockToSlot(player, inv, slot);
+        for (int slot = 0; slot <= OFFHAND_SLOT; slot++) {
+            if (isLockedSlotItem(inv.getItem(slot))) {
+                inv.setItem(slot, null);
+            }
         }
-
-        // Bloquear el offhand
-        applyLockToOffhand(player, inv);
-
         player.updateInventory();
     }
 
-    private static void applyLockToSlot(Player player, PlayerInventory inv, int slot) {
+    private static void applyLockToSlot(Player player, PlayerInventory inv, int slot, Set<Integer> locked) {
         ItemStack current = inv.getItem(slot);
 
         // Si ya tiene un bloqueador, skip
@@ -217,42 +153,18 @@ public class Day40InventoryListener implements Listener {
 
         // Si hay un item en el slot, moverlo a otro slot disponible
         if (current != null && current.getType() != Material.AIR) {
-            int freeSlot = findFreeSlot(player);
+            int freeSlot = findFreeSlot(player, locked);
             if (freeSlot != -1) {
                 inv.setItem(freeSlot, current);
             } else {
                 // No hay espacio, dropear el item
                 player.getWorld().dropItemNaturally(player.getLocation(), current);
-                MessageUtils.send(player, "<red>⚠ No había espacio para un item, se ha dropeado al suelo.");
+                MessageUtils.send(player, "<red>No había espacio para un item, se ha dropeado al suelo.");
             }
         }
 
-        // Colocar el bloqueador
+        // Colocar el bloqueador (el 40 es la mano izquierda)
         inv.setItem(slot, createLockedSlotItem());
-    }
-
-    private static void applyLockToOffhand(Player player, PlayerInventory inv) {
-        ItemStack current = inv.getItemInOffHand();
-
-        // Si ya tiene un bloqueador, skip
-        if (current != null && isLockedSlotItem(current)) {
-            return;
-        }
-
-        // Si hay un item en el offhand, moverlo a otro slot disponible
-        if (current != null && current.getType() != Material.AIR) {
-            int freeSlot = findFreeSlot(player);
-            if (freeSlot != -1) {
-                inv.setItem(freeSlot, current);
-            } else {
-                // No hay espacio, dropear el item
-                player.getWorld().dropItemNaturally(player.getLocation(), current);
-                MessageUtils.send(player, "<red>⚠ No había espacio para un item, se ha dropeado al suelo.");
-            }
-        }
-
-        // Colocar el bloqueador en offhand
-        inv.setItemInOffHand(createLockedSlotItem());
     }
 
     /**
@@ -272,15 +184,11 @@ public class Day40InventoryListener implements Listener {
             // Lore explicativo
             meta.lore(List.of(
                     Component.text("").decoration(TextDecoration.ITALIC, false),
-                    Component.text("Este slot está bloqueado").color(NamedTextColor.GRAY)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("a partir del Día 40.").color(NamedTextColor.GRAY)
+                    Component.text("Este slot está bloqueado.").color(NamedTextColor.GRAY)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.text("").decoration(TextDecoration.ITALIC, false),
-                    Component.text("-5 Slots de inventario").color(NamedTextColor.RED)
-                            .decoration(TextDecoration.ITALIC, false),
-                    Component.text("").decoration(TextDecoration.ITALIC, false),
-                    Component.text("Obtén la Reliquia del Fin").color(NamedTextColor.GOLD)
+                    Component.text(GameManager.getInstance().getDay() >= 60 ? "Obtén la Reliquia del Comienzo"
+                            : "Obtén la Reliquia del Fin").color(NamedTextColor.GOLD)
                             .decoration(TextDecoration.ITALIC, false),
                     Component.text("para desbloquear estos slots.").color(NamedTextColor.GOLD)
                             .decoration(TextDecoration.ITALIC, false)));
@@ -306,52 +214,17 @@ public class Day40InventoryListener implements Listener {
     }
 
     /**
-     * Verificar si el jugador tiene algún item bloqueador en su inventario
+     * Encontrar un slot libre que no esté bloqueado (primero el inventario, después la hotbar)
      */
-    private static boolean hasAnyLockedSlotItem(Player player) {
+    private static int findFreeSlot(Player player, Set<Integer> locked) {
         PlayerInventory inv = player.getInventory();
-
-        // Revisar slots bloqueados
-        for (int slot : LOCKED_SLOTS) {
-            if (isLockedSlotItem(inv.getItem(slot))) {
-                return true;
-            }
-        }
-
-        // Revisar offhand
-        if (isLockedSlotItem(inv.getItemInOffHand())) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Encontrar un slot libre que no esté en la lista de bloqueados
-     */
-    private static int findFreeSlot(Player player) {
-        PlayerInventory inv = player.getInventory();
-
-        // Buscar en el inventario principal (excluyendo slots bloqueados)
-        for (int i = 9; i < 36; i++) {
-            if (LOCKED_SLOTS.contains(i))
-                continue;
+        for (int n = 0; n < 36; n++) {
+            int i = (n + 9) % 36;
             ItemStack item = inv.getItem(i);
-            if (item == null || item.getType() == Material.AIR) {
+            if (!locked.contains(i) && (item == null || item.getType() == Material.AIR)) {
                 return i;
             }
         }
-
-        // Buscar en la hotbar (excluyendo slots bloqueados)
-        for (int i = 0; i < 9; i++) {
-            if (LOCKED_SLOTS.contains(i))
-                continue;
-            ItemStack item = inv.getItem(i);
-            if (item == null || item.getType() == Material.AIR) {
-                return i;
-            }
-        }
-
         return -1; // No hay espacio
     }
 
@@ -370,22 +243,23 @@ public class Day40InventoryListener implements Listener {
 
         Player player = (Player) e.getWhoClicked();
 
-        // Si tiene la reliquia, permitir todo (solo remover bloqueadores si existen)
-        if (hasEndRelic(player)) {
-            // Solo remover si hay bloqueadores pendientes
-            if (hasAnyLockedSlotItem(player)) {
-                removeLockedSlotsFromPlayer(player);
-            }
+        // En creativo el objeto que se arrastra solo existe en el cliente: cancelar el clic lo borraba. No se frena;
+        // al cerrar, updateLockedSlots mueve lo que quede en un slot bloqueado a otro libre o al suelo
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE) {
             return;
         }
 
+        Set<Integer> locked = lockedSlots(player);
+        if (locked.isEmpty()) {
+            return;
+        }
         int slot = e.getSlot();
 
         // Tecla numérica de un slot bloqueado o F (mano izquierda) en cualquier inventario, también en cofres:
         // intercambiaban el bloqueador con el slot del cofre
         if ((e.getClick() == org.bukkit.event.inventory.ClickType.NUMBER_KEY
-                && LOCKED_SLOTS.contains(e.getHotbarButton()))
-                || e.getClick() == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND) {
+                && locked.contains(e.getHotbarButton()))
+                || (e.getClick() == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND && locked.contains(OFFHAND_SLOT))) {
             e.setCancelled(true);
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.2f);
             return;
@@ -395,7 +269,7 @@ public class Day40InventoryListener implements Listener {
         if (e.getClickedInventory() != null && e.getClickedInventory().equals(player.getInventory())) {
 
             // Si es un slot bloqueado o el offhand
-            if (LOCKED_SLOTS.contains(slot) || slot == OFFHAND_SLOT) {
+            if (locked.contains(slot)) {
                 // Cancelar CUALQUIER interacción con slot bloqueado
                 e.setCancelled(true);
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.2f);
@@ -439,17 +313,17 @@ public class Day40InventoryListener implements Listener {
         }
 
         Player player = (Player) e.getWhoClicked();
-
-        // Si tiene la reliquia, permitir todo
-        if (hasEndRelic(player)) {
-            return;
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE) {
+            return; // ver onInventoryClick
         }
+
+        Set<Integer> locked = lockedSlots(player);
 
         // Verificar si alguno de los slots afectados del jugador está bloqueado (los del cofre no cuentan)
         for (int raw : e.getRawSlots()) {
             int slot = e.getView().convertSlot(raw);
             if (e.getView().getInventory(raw) == player.getInventory()
-                    && (LOCKED_SLOTS.contains(slot) || slot == OFFHAND_SLOT)) {
+                    && locked.contains(slot)) {
                 e.setCancelled(true);
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.2f);
                 return;
@@ -466,12 +340,11 @@ public class Day40InventoryListener implements Listener {
             return;
         }
 
-        // Si tiene la reliquia, permitir
-        if (hasEndRelic(e.getPlayer())) {
+        // Mano izquierda o slot de la mano bloqueados: el bloqueador cambiaría de sitio
+        Set<Integer> locked = lockedSlots(e.getPlayer());
+        if (!locked.contains(OFFHAND_SLOT) && !locked.contains(e.getPlayer().getInventory().getHeldItemSlot())) {
             return;
         }
-
-        // Cancelar el swap porque el offhand está bloqueado
         e.setCancelled(true);
         e.getPlayer().playSound(e.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.2f);
     }
@@ -495,8 +368,8 @@ public class Day40InventoryListener implements Listener {
             }, 1L);
         }
 
-        // Si suelta la reliquia, actualizar los slots
-        if (isEndRelic(e.getItemDrop().getItemStack())) {
+        // Si suelta una reliquia, actualizar los slots
+        if (isRelic(e.getItemDrop().getItemStack())) {
             Bukkit.getScheduler().runTaskLater(HMPlugin.getInstance(), () -> {
                 updateLockedSlots(e.getPlayer());
             }, 1L);
@@ -550,7 +423,7 @@ public class Day40InventoryListener implements Listener {
 
         // Verificar si el resultado es la Reliquia del Fin
         ItemStack result = e.getRecipe().getResult();
-        if (!isEndRelic(result)) {
+        if (!HM.LuckyDemon.items.HMItems.isItem(result, "end_relic")) {
             return;
         }
 

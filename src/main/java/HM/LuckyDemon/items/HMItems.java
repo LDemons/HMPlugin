@@ -94,9 +94,25 @@ public class HMItems {
     }
 
     public static boolean isInfernalNetherite(ItemStack item) {
-        return item != null && item.hasItemMeta() && "infernal_netherite".equals(item.getItemMeta()
+        return isItem(item, "infernal_netherite");
+    }
+
+    /** true si el item lleva la marca permadeath_item con ese id (end_relic, beginning_relic, life_orb...). */
+    public static boolean isItem(ItemStack item, String id) {
+        return item != null && item.hasItemMeta() && id.equals(item.getItemMeta()
                 .getPersistentDataContainer().get(new org.bukkit.NamespacedKey(HM.LuckyDemon.HMPlugin.getInstance(),
                         "permadeath_item"), org.bukkit.persistence.PersistentDataType.STRING));
+    }
+
+    /**
+     * true si el jugador lleva ese item en cualquier parte del inventario (también armadura, mano izquierda y el
+     * cursor: al moverla, la reliquia está en el cursor y no debe contar como que no la tiene).
+     */
+    public static boolean carries(org.bukkit.entity.Player p, String id) {
+        for (ItemStack item : p.getInventory().getContents()) {
+            if (isItem(item, id)) return true;
+        }
+        return isItem(p.getItemOnCursor(), id);
     }
 
     // --- Netherite Infernal (Armadura) ---

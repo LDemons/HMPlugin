@@ -118,7 +118,7 @@ public class Day50Listener implements Listener {
         Player p = e.getPlayer();
         if (day50() && (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
                 && !p.getInventory().getItemInMainHand().getType().name().startsWith("NETHERITE_")) {
-            p.damage(1.0);
+            p.damage(GameManager.getInstance().getDay() >= 60 ? 16.0 : 1.0); // DÍA 60: 8 corazones
         }
     }
 
