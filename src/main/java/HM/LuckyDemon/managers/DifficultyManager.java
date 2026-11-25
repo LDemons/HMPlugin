@@ -83,17 +83,26 @@ public class DifficultyManager {
         // DÍA 30: murciélagos y calamares se cancelan al nacer, su tope nunca se llena y el juego lo reintenta
         // cada tick. Intentarlo cada 10 s quita ese trabajo (-1 = valor por defecto del server)
         int ticks = currentDay >= 30 ? TRANSFORMED_SPAWN_TICKS : -1;
-        // DÍA 10: doble de mobs hostiles (tope de monstruos x2; -1 = valor por defecto del server)
-        int monsters = getMobSpawnMultiplier() > 1 ? (int) (org.bukkit.Bukkit.getSpawnLimit(
-                org.bukkit.entity.SpawnCategory.MONSTER) * getMobSpawnMultiplier()) : -1;
+        // DÍA 10: más mobs hostiles, tope de monstruos 100 (vanilla 70; con x2, 140, era demasiado). -1 = defecto
+        int monsters = difficultyLevel >= 1 ? MONSTER_LIMIT : -1;
         for (org.bukkit.World world : org.bukkit.Bukkit.getWorlds()) {
-            world.setSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER, monsters);
+            boolean nether = world.getEnvironment() == org.bukkit.World.Environment.NETHER;
+            // El Nether queda con el tope normal: con más se llenaba (poco espacio para que nazcan)
+            world.setSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER, nether ? -1 : monsters);
+            // DÍA 10: en el Overworld y el Nether los monstruos se intentan sacar cada 1 s, no cada tick: si no, al
+            // matar uno salía otro (o un grupo) al instante. El End y The Beginning quedan como estaban
+            boolean slowRespawn = nether || world.getEnvironment() == org.bukkit.World.Environment.NORMAL;
+            world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.MONSTER,
+                    slowRespawn && currentDay >= 10 ? MONSTER_SPAWN_TICKS : -1);
             world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.AMBIENT, ticks);
             world.setTicksPerSpawns(org.bukkit.entity.SpawnCategory.WATER_ANIMAL, ticks);
         }
     }
 
     private static final int TRANSFORMED_SPAWN_TICKS = 200;
+    // Vanilla intenta cada tick; 200 (10 s) casi no sacaba nada
+    private static final int MONSTER_SPAWN_TICKS = 20;
+    private static final int MONSTER_LIMIT = 100;
 
     public int getDifficultyLevel() {
         return difficultyLevel;
@@ -1595,13 +1604,6 @@ public class DifficultyManager {
     }
 
     // ========== REGLAS SEGÚN DÍA ==========
-
-    public double getMobSpawnMultiplier() {
-        if (difficultyLevel >= 1) {
-            return 2.0;
-        }
-        return 1.0;
-    }
 
     public int getMinimumPlayersRequired() {
         if (difficultyLevel >= 1) {

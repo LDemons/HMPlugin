@@ -52,6 +52,11 @@ public class PlayerListener implements Listener {
     // Día 30: tope de Blazes / Guardianes cerca para los que salen de murciélagos y calamares
     private static final int MAX_TRANSFORMED = 4;
     private static final double TRANSFORM_RADIUS = 64;
+    // Día 10+: tope de magma cubes naturales alrededor del jugador más cercano (con el tope de mobs doble los Basalt
+    // Deltas se llenaban); desde el 40 vale también para los Ender Creepers del Nether. Se cuenta en todo el radio
+    // donde nacen mobs (128): contando alrededor del spawn, cada zona de 32 bloques tenía sus 8
+    private static final int MAX_MAGMA_CUBES = 8;
+    private static final double MAGMA_CUBE_RADIUS = 128;
     private final java.util.Random random = new java.util.Random();
 
     // Marca en el jugador: murio con vidas y todavia no volvio a supervivencia
@@ -273,6 +278,33 @@ public class PlayerListener implements Listener {
                 guardian.setCustomNameVisible(false);
             }
             return;
+        }
+
+        // DÍA 10+: con 8 magma cubes cerca no salen más naturales (las divisiones al matarlos sí).
+        // DÍA 40+: lo mismo con los endermans del Nether, que pasan a Ender Creepers (llenaban los Warped Forest)
+        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL) {
+            Class<? extends LivingEntity> capped = null;
+            if (currentDay >= 10 && e.getEntity() instanceof MagmaCube) {
+                capped = MagmaCube.class;
+            } else if (currentDay >= 40 && e.getEntityType() == EntityType.ENDERMAN
+                    && e.getLocation().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
+                capped = Creeper.class;
+            }
+            if (capped != null) {
+                Location center = e.getLocation();
+                double best = Double.MAX_VALUE;
+                for (Player p : e.getLocation().getNearbyPlayers(MAGMA_CUBE_RADIUS)) {
+                    double d = p.getLocation().distanceSquared(e.getLocation());
+                    if (d < best) {
+                        best = d;
+                        center = p.getLocation();
+                    }
+                }
+                if (center.getNearbyEntitiesByType(capped, MAGMA_CUBE_RADIUS).size() >= MAX_MAGMA_CUBES) {
+                    e.setCancelled(true);
+                    return;
+                }
+            }
         }
 
         // DÍA 25+: Marcar slimes de división

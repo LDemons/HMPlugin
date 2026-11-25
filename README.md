@@ -19,7 +19,7 @@ Plugin de Paper (26.3, Java 25) inspirado en Permadeath, a estilo propio. Cada d
 
 ## Dia 10
 
-- Doble de mobs hostiles.
+- Mas mobs hostiles en el Overworld y el End: el tope pasa de 70 a 100 (el Nether queda en 70). En el Overworld y el Nether los mobs aparecen mas despacio (no reaparecen al instante al matarlos). Nunca mas de 8 magma cubes naturales alrededor de cada jugador.
 - Para pasar la noche hay que ser al menos 4 jugadores conectados.
 - Aranas con 1 a 3 efectos aleatorios (Speed III, Fuerza IV, Salto V, Regeneracion IV, Resistencia III, Invisibilidad, Glowing o Caida Lenta).
 - Creaking con Fuerza I y Speed I.
@@ -98,7 +98,7 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Zombies -> **Vindicator Furioso** (Fuerza I, vida x2).
 - Aranas -> aranas de cueva (con esqueleto jinete: **Arana de Cueva Jinete**).
 - Vacas, mooshrooms, ovejas, cerdos y pollos -> **Ravager de Granja**.
-- Endermans del Nether -> Ender Creepers; 10% de **Endermans Hostiles**.
+- Endermans del Nether -> Ender Creepers (nunca mas de 8 creepers alrededor de cada jugador); 10% de **Endermans Hostiles**.
 - Creepers con Speed II y Resistencia II; golems con Fuerza I; guardianes con Speed III, Resistencia II y el rayo carga el doble de rapido.
 - **Phantom Jinete** (phantom con esqueleto de clase).
 - Lobos -> gatos; todo gato u ocelote es un **Gato Supernova** (se anuncia y explota a los 30 s, maximo 2 a la vez).
@@ -142,6 +142,8 @@ Desde aqui los mobs especiales llevan nombre propio (sale en las muertes).
 - Te ahogas 5 veces mas rapido.
 - Estar sobre arena de almas da Slowness II.
 - Los bloques de magma y el dano de los Sulfur Cube pasan a x8 (el doble que el dia 40).
+- Los **Dried Ghast** se convierten en spawners trampa de ghast: se activan con un jugador a 8 bloques y sacan 1 ghast cada 10 minutos.
+- Los **Happy Ghast** pasan a ser Ghast (tambien los domados; el arnes se suelta).
 - Mucha mas ceguera bajo la lluvia.
 - Los mobs hostiles tienen Resistencia al Fuego.
 - Las arañas de cueva ya no pueden tener Glowing.
